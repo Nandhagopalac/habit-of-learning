@@ -1,243 +1,131 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily Learning Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .checkbox-cell { min-width: 48px }
-    .transition-width { transition: width .35s ease }
-  </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
-  <div class="max-w-6xl mx-auto p-6">
-    <header class="flex items-center justify-between mb-6">
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen p-6">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">📘 Daily Learning Monitor</h1>
+
+    <!-- Date Range Picker -->
+    <div class="flex gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-semibold">Daily Learning Monitor</h1>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Track weekday progress per topic • Autosaves to your browser</p>
+        <label class="block font-medium">Start Date</label>
+        <input type="date" id="startDate" class="p-2 rounded border" />
       </div>
-      <div class="flex items-center gap-3">
-        <button id="quoteBtn" class="px-3 py-1 rounded-md border text-sm">Motivate me</button>
-        <span id="themeBtn" class="px-3 py-1 rounded-md border cursor-pointer">Toggle Dark</span>
+      <div>
+        <label class="block font-medium">End Date</label>
+        <input type="date" id="endDate" class="p-2 rounded border" />
       </div>
-    </header>
+      <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded self-end">Generate Table</button>
+    </div>
 
-    <!-- Summary -->
-    <section class="mb-6 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <div class="text-sm text-gray-500 dark:text-gray-300">Overall Progress</div>
-          <div class="w-80 sm:w-96 mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-            <div id="overallBar" class="h-4 rounded-full bg-green-500 transition-width" style="width:0%"></div>
-          </div>
-        </div>
-        <div class="text-right">
-          <div id="overallPercent" class="text-xl font-medium">0%</div>
-          <div class="text-sm text-gray-500 dark:text-gray-300">Completed days / total</div>
-        </div>
-      </div>
-    </section>
+    <!-- Progress Summary -->
+    <div id="progressSummary" class="mb-4 font-semibold"></div>
 
-    <!-- Table -->
-    <section class="mb-6 overflow-x-auto">
-      <table class="w-full table-auto bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-        <thead class="border-b dark:border-gray-700">
-          <tr class="text-sm text-left">
-            <th class="p-3">Topic</th>
-            <th class="p-3">Sub-topic</th>
-            <th class="p-3">Time (mins)</th>
-            <th class="p-3 text-center">Monday</th>
-            <th class="p-3 text-center">Tuesday</th>
-            <th class="p-3 text-center">Wednesday</th>
-            <th class="p-3 text-center">Thursday</th>
-            <th class="p-3 text-center">Friday</th>
-            <th class="p-3">Progress</th>
-            <th class="p-3">URL</th>
-            <th class="p-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="topicsBody"></tbody>
+    <!-- Learning Table -->
+    <div class="overflow-x-auto">
+      <table id="learningTable" class="min-w-full border border-gray-300 bg-white dark:bg-gray-800">
+        <thead class="bg-gray-200 dark:bg-gray-700"></thead>
+        <tbody></tbody>
       </table>
-    </section>
-
-    <!-- Controls -->
-    <section class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-      <div class="flex gap-2">
-        <button id="addTopic" class="px-3 py-2 rounded-md bg-blue-600 text-white">Add Topic</button>
-        <button id="exportCSV" class="px-3 py-2 rounded-md border">Export CSV</button>
-        <button id="exportJSON" class="px-3 py-2 rounded-md border">Export JSON</button>
-        <button id="resetWeek" class="px-3 py-2 rounded-md border text-red-600">Reset Week</button>
-      </div>
-      <div class="text-sm text-gray-600 dark:text-gray-300">Tip: Data is saved locally in your browser. Use export to back up.</div>
-    </section>
-
-    <footer class="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">Made with ❤️ — Keep iterating on your routine</footer>
-  </div>
-
-  <!-- Add Topic Modal -->
-  <div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 w-full max-w-md">
-      <h3 class="text-lg font-medium mb-3">Add / Edit Topic</h3>
-      <div class="flex flex-col gap-3">
-        <input id="topicName" placeholder="Topic name" class="p-2 rounded border bg-gray-50 dark:bg-gray-900" />
-        <input id="subTopicName" placeholder="Sub-topic (optional)" class="p-2 rounded border bg-gray-50 dark:bg-gray-900" />
-        <input id="topicTime" type="number" min="1" placeholder="Time in minutes" class="p-2 rounded border bg-gray-50 dark:bg-gray-900" />
-        <input id="topicUrl" placeholder="Reference URL" class="p-2 rounded border bg-gray-50 dark:bg-gray-900" />
-        <div class="flex justify-end gap-2">
-          <button id="cancelModal" class="px-3 py-1 rounded-md border">Cancel</button>
-          <button id="saveTopic" class="px-3 py-1 rounded-md bg-green-600 text-white">Save</button>
-        </div>
-      </div>
     </div>
   </div>
 
   <script>
-    const weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
-
-    const defaultTopics = [
-      { id: id(), name: 'System Design', sub: '', mins: 15, url:'', days: [false,false,false,false,false] },
-      { id: id(), name: 'Data Engineer - Quantexa', sub: '', mins: 30, url:'', days: [false,false,false,false,false] },
-      { id: id(), name: 'SQL/Postgres', sub: '', mins: 15, url:'', days: [false,false,false,false,false] },
-      { id: id(), name: 'Programming Language (Scala)', sub: '', mins: 30, url:'', days: [false,false,false,false,false] },
-      { id: id(), name: 'AWS concepts (Networking, etc)', sub: '', mins: 30, url:'', days: [false,false,false,false,false] },
-      { id: id(), name: 'Read & improve vocabulary - usage', sub: '', mins: 10, url:'', days: [false,false,false,false,false] }
+    const topics = [
+      { topic: "System Design", sub: "", time: 15 },
+      { topic: "Data Engineering - Quantexa", sub: "", time: 30 },
+      { topic: "SQL/Postgres", sub: "", time: 15 },
+      { topic: "Scala Programming", sub: "", time: 30 },
+      { topic: "AWS Concepts", sub: "", time: 30 },
+      { topic: "Vocabulary Improvement", sub: "", time: 10 }
     ];
 
-    function id() { return Math.random().toString(36).slice(2,9) }
-    function qs(sel) { return document.querySelector(sel) }
-    function qsa(sel) { return Array.from(document.querySelectorAll(sel)) }
+    const table = document.getElementById("learningTable");
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+    const summary = document.getElementById("progressSummary");
 
-    const STORAGE_KEY = 'daily_learning_monitor_v2';
-    let topics = load() || defaultTopics.slice();
-
-    function load(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null }catch(e){return null} }
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(topics)) }
-
-    const topicsBody = qs('#topicsBody');
-    function render(){
-      topicsBody.innerHTML = '';
-      let totalCompleted = 0; let totalSlots = topics.length * weekdays.length;
-      topics.forEach(t => {
-        const completed = t.days.filter(Boolean).length;
-        totalCompleted += completed;
-        const tr = document.createElement('tr');
-        tr.className = 'border-b dark:border-gray-700';
-        tr.innerHTML = `
-          <td class="p-3 align-top">${escapeHtml(t.name)}</td>
-          <td class="p-3 align-top">${escapeHtml(t.sub || '')}</td>
-          <td class="p-3 align-top"><input data-id="${t.id}" data-field="mins" class="w-20 p-1 rounded border bg-gray-50 dark:bg-gray-900 text-sm" value="${t.mins}" /></td>
-          ${t.days.map((d,i)=>`<td class="p-3 text-center checkbox-cell align-top"><input data-id="${t.id}" data-day="${i}" type="checkbox" ${d ? 'checked' : ''} class="day-checkbox" /></td>`).join('')}
-          <td class="p-3 align-top w-40">
-            <div class="text-sm">${completed}/${weekdays.length}</div>
-            <div class="w-full mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-              <div class="h-3 rounded-full bg-green-500 transition-width" style="width:${(completed/weekdays.length*100)}%"></div>
-            </div>
-          </td>
-          <td class="p-3 align-top"><a href="${escapeHtml(t.url)}" target="_blank" class="text-blue-600 underline text-sm">${t.url ? 'Link' : ''}</a></td>
-          <td class="p-3 align-top w-36">
-            <div class="flex gap-2">
-              <button data-action="edit" data-id="${t.id}" class="px-2 py-1 rounded border text-sm">Edit</button>
-              <button data-action="delete" data-id="${t.id}" class="px-2 py-1 rounded border text-sm text-red-600">Delete</button>
-            </div>
-          </td>`;
-        topicsBody.appendChild(tr);
-      });
-      const overallPercent = totalSlots ? Math.round(totalCompleted / totalSlots * 100) : 0;
-      qs('#overallBar').style.width = overallPercent + '%';
-      qs('#overallPercent').textContent = overallPercent + '%';
-
-      qsa('.day-checkbox').forEach(cb=> cb.addEventListener('change', onToggleDay));
-      qsa('input[data-field="mins"]').forEach(inp=> inp.addEventListener('change', onMinEdit));
-      qsa('button[data-action="edit"]').forEach(b=> b.addEventListener('click', onEditTopic));
-      qsa('button[data-action="delete"]').forEach(b=> b.addEventListener('click', onDeleteTopic));
-
-      save();
-    }
-
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
-
-    function onToggleDay(e){
-      const id = e.target.dataset.id; const day = Number(e.target.dataset.day);
-      const topic = topics.find(t=> t.id===id); if(!topic) return;
-      topic.days[day] = e.target.checked;
-      render();
-    }
-    function onMinEdit(e){
-      const id = e.target.dataset.id; const val = Number(e.target.value) || 0;
-      const topic = topics.find(t=> t.id===id); if(!topic) return; topic.mins = val; save();
-    }
-    function onEditTopic(e){
-      const id = e.target.dataset.id; const topic = topics.find(t=> t.id===id); if(!topic) return openModal(topic);
-    }
-    function onDeleteTopic(e){
-      const id = e.target.dataset.id;
-      if(!confirm('Delete this topic?')) return;
-      topics = topics.filter(t=> t.id!==id); render();
-    }
-
-    const modal = qs('#modal'); const topicName = qs('#topicName'); const subTopicName = qs('#subTopicName'); const topicTime = qs('#topicTime'); const topicUrl = qs('#topicUrl');
-    let editingId = null;
-    qs('#addTopic').addEventListener('click', ()=> openModal());
-    qs('#cancelModal').addEventListener('click', closeModal);
-    qs('#saveTopic').addEventListener('click', ()=>{
-      const name = topicName.value.trim() || 'Untitled';
-      const sub = subTopicName.value.trim();
-      const mins = Math.max(1, Number(topicTime.value) || 10);
-      const url = topicUrl.value.trim();
-      if(editingId){
-        const t = topics.find(x=> x.id===editingId); if(!t) return closeModal();
-        t.name = name; t.sub = sub; t.mins = mins; t.url = url;
-      } else {
-        topics.push({ id: id(), name, sub, mins, url, days: [false,false,false,false,false] });
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      const startDate = new Date(document.getElementById("startDate").value);
+      const endDate = new Date(document.getElementById("endDate").value);
+      if (!startDate || !endDate || startDate > endDate) {
+        alert("Please select a valid date range.");
+        return;
       }
-      closeModal(); render();
+
+      generateTable(startDate, endDate);
     });
 
-    function openModal(topic){
-      editingId = topic ? topic.id : null;
-      topicName.value = topic ? topic.name : '';
-      subTopicName.value = topic ? topic.sub : '';
-      topicTime.value = topic ? topic.mins : '';
-      topicUrl.value = topic ? topic.url : '';
-      modal.classList.remove('hidden'); modal.classList.add('flex');
+    function generateTable(startDate, endDate) {
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      let dates = [];
+      let current = new Date(startDate);
+      while (current <= endDate) {
+        dates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Header row
+      let headerRow = "<tr><th class='border px-4 py-2'>Topic</th><th class='border px-4 py-2'>Sub-topic</th><th class='border px-4 py-2'>Time (mins)</th>";
+      dates.forEach(d => {
+        headerRow += `<th class='border px-4 py-2'>${d.toDateString()}</th>`;
+      });
+      headerRow += "</tr>";
+      thead.innerHTML = headerRow;
+
+      // Body rows
+      topics.forEach((t, rowIndex) => {
+        let row = `<tr><td class='border px-4 py-2'>${t.topic}</td>`;
+        row += `<td class='border px-4 py-2'><input type='text' data-row='${rowIndex}' data-subtopic class='w-full p-1 rounded border' value='${t.sub}'></td>`;
+        row += `<td class='border px-4 py-2 text-center'>${t.time}</td>`;
+        dates.forEach((d, colIndex) => {
+          const key = `${t.topic}_${d.toDateString()}`;
+          const checked = localStorage.getItem(key) === "true" ? "checked" : "";
+          row += `<td class='border px-4 py-2 text-center'><input type='checkbox' data-key='${key}' ${checked}></td>`;
+        });
+        row += "</tr>";
+        tbody.innerHTML += row;
+      });
+
+      attachEventListeners();
+      updateSummary(dates);
     }
-    function closeModal(){ editingId = null; modal.classList.add('hidden'); modal.classList.remove('flex'); }
 
-    qs('#exportJSON').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(topics, null, 2)], {type:'application/json'});
-      downloadBlob(blob, 'daily_learning_progress.json');
-    });
-    qs('#exportCSV').addEventListener('click', ()=>{
-      const rows = [['Topic','Sub-topic','Time(mins)',...weekdays,'URL']];
-      topics.forEach(t=> rows.push([t.name, t.sub, t.mins, ...t.days.map(d=> d? '1':'0'), t.url]));
-      const csv = rows.map(r=> r.map(cell=> '"'+String(cell).replace(/"/g,'""')+'"').join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      downloadBlob(blob, 'daily_learning_progress.csv');
-    });
-    function downloadBlob(blob, filename){ const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+    function attachEventListeners() {
+      document.querySelectorAll("input[type='checkbox']").forEach(cb => {
+        cb.addEventListener("change", e => {
+          localStorage.setItem(e.target.dataset.key, e.target.checked);
+          updateSummary();
+        });
+      });
 
-    qs('#resetWeek').addEventListener('click', ()=>{
-      if(!confirm('Reset all checkboxes for the week?')) return;
-      topics.forEach(t=> t.days = [false,false,false,false,false]); render();
-    });
+      document.querySelectorAll("[data-subtopic]").forEach(input => {
+        input.addEventListener("input", e => {
+          topics[e.target.dataset.row].sub = e.target.value;
+          localStorage.setItem(`subtopic_${topics[e.target.dataset.row].topic}`, e.target.value);
+        });
+      });
+    }
 
-    const themeBtn = qs('#themeBtn');
-    const THEME_KEY = 'dlm_theme';
-    function setTheme(dark){ if(dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); localStorage.setItem(THEME_KEY, dark? 'dark':'light'); themeBtn.textContent = dark? 'Dark' : 'Light'; }
-    themeBtn.addEventListener('click', ()=>{ const isDark = document.documentElement.classList.contains('dark'); setTheme(!isDark); });
-    (function(){ const saved = localStorage.getItem(THEME_KEY); setTheme(saved=== 'dark'); })();
-
-    const quotes = [
-      "Tiny progress every day adds up to big results.",
-      "Consistency is better than intensity.",
-      "Learn, apply, repeat.",
-      "Show up. Do the work. Improve.",
-      "Small steps create lasting habits."
-    ];
-    qs('#quoteBtn').addEventListener('click', ()=> alert(quotes[Math.floor(Math.random()*quotes.length)]));
-
-    render();
+    function updateSummary(dates = null) {
+      if (!dates) return;
+      let total = 0, done = 0;
+      topics.forEach(t => {
+        dates.forEach(d => {
+          total++;
+          const key = `${t.topic}_${d.toDateString()}`;
+          if (localStorage.getItem(key) === "true") done++;
+        });
+      });
+      summary.textContent = `Overall Progress: ${done}/${total} tasks completed`;
+    }
   </script>
 </body>
 </html>

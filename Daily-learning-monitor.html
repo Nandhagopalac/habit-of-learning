@@ -53,10 +53,129 @@
     .refresh-btn:active {
       transform: rotate(180deg);
     }
+    .copy-topics-modal {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .date-checkbox {
+      accent-color: #6366f1;
+    }
+    .topic-checkbox {
+      accent-color: #10b981;
+    }
+    .selected-source-date {
+      background-color: #fef3c7 !important;
+      border: 2px solid #f59e0b;
+    }
+    .subtopic-row input:placeholder-shown,
+    .subtopic-row textarea:placeholder-shown {
+      background-color: #fef7cd;
+      border-color: #f59e0b;
+    }
+    .subtopic-row input:focus,
+    .subtopic-row textarea:focus {
+      background-color: #ffffff;
+      border-color: #6366f1;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center py-6">
   <h1 class="text-3xl font-bold mb-6 text-indigo-700">📚 Daily Learning Tracker</h1>
+
+  <!-- Copy Topics Modal -->
+  <div id="copyTopicsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="copy-topics-modal text-white rounded-xl p-6 w-11/12 md:w-4/5 max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">📋 Copy Multiple Topics to Other Dates</h3>
+        <button id="closeCopyModal" class="text-white hover:text-gray-300 text-2xl">&times;</button>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left side - Source date and topics -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-white/90 font-medium mb-2">Source Date:</label>
+            <div id="selectedSourceDate" class="bg-white/20 rounded-lg p-3 text-white font-medium">
+              No date selected
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <label class="block text-white/90 font-medium">Select Topics to Copy:</label>
+              <div class="space-x-2">
+                <button id="selectAllTopics" class="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs">
+                  All
+                </button>
+                <button id="clearAllTopics" class="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs">
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div id="sourceTopicsContainer" class="bg-white/10 rounded-lg p-3 max-h-60 overflow-y-auto">
+              <!-- Source topics will be populated here -->
+            </div>
+          </div>
+
+          <div class="bg-white/10 rounded-lg p-3">
+            <div class="text-xs text-white/80 mb-2">✨ Copy Behavior:</div>
+            <div class="text-xs text-white/70">
+              <div>📋 <strong>Copies:</strong> Topic names only</div>
+              <div>❌ <strong>Resets:</strong> Sub-topics, Notes, Completed status</div>
+              <div>💡 <strong>Purpose:</strong> Fresh start for new learning</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle - Target date selection -->
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <label class="block text-white/90 font-medium">Copy to Dates:</label>
+            <div class="space-x-2">
+              <button id="selectAllCopyDates" class="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs">
+                All
+              </button>
+              <button id="clearAllCopyDates" class="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs">
+                Clear
+              </button>
+            </div>
+          </div>
+          <div id="copyDateCheckboxContainer" class="bg-white/10 rounded-lg p-3 max-h-80 overflow-y-auto">
+            <!-- Date checkboxes will be populated here -->
+          </div>
+        </div>
+
+        <!-- Right side - Actions and summary -->
+        <div class="space-y-4">
+          <div class="bg-white/10 rounded-lg p-4">
+            <h4 class="font-medium mb-2 text-white/90">📊 Copy Summary</h4>
+            <div id="copySummary" class="text-sm space-y-1">
+              <div>Topics: <span id="topicsCount">0</span> selected</div>
+              <div>Dates: <span id="datesCount">0</span> selected</div>
+              <div>Total entries: <span id="totalEntries">0</span> will be created</div>
+            </div>
+          </div>
+
+          <div class="bg-white/10 rounded-lg p-3">
+            <div class="text-xs text-white/80 mb-2">📝 Preview:</div>
+            <div id="copyPreview" class="text-xs text-white/70">
+              Select topics and dates to see preview
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <button id="copyTopicsBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200">
+              <span class="text-lg mr-2">📋</span> Copy Topics to Selected Dates
+            </button>
+            <button id="cancelCopyTopics" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Date Range Picker -->
   <div class="bg-white shadow-md rounded-lg p-4 mb-6 w-11/12 md:w-2/3 flex flex-col md:flex-row gap-4 justify-center">
@@ -82,7 +201,7 @@
       </label>
       <label class="flex items-center">
         <input type="radio" name="viewMode" value="grouped" class="mr-2">
-        <span class="text-sm font-medium text-gray-700">Topic Grouped View (read-only)</span>
+        <span class="text-sm font-medium text-gray-700">Topic Grouped View (editable)</span>
       </label>
     </div>
   </div>
@@ -119,7 +238,24 @@
       rangeSummary: document.getElementById("rangeSummary"),
       tableContainer: document.getElementById("tableContainer"),
       loadingIndicator: document.getElementById("loadingIndicator"),
-      viewModeInputs: document.querySelectorAll('input[name="viewMode"]')
+      viewModeInputs: document.querySelectorAll('input[name="viewMode"]'),
+      
+      // Copy Topics Modal elements
+      copyTopicsModal: document.getElementById("copyTopicsModal"),
+      closeCopyModal: document.getElementById("closeCopyModal"),
+      selectedSourceDate: document.getElementById("selectedSourceDate"),
+      sourceTopicsContainer: document.getElementById("sourceTopicsContainer"),
+      copyDateCheckboxContainer: document.getElementById("copyDateCheckboxContainer"),
+      selectAllTopics: document.getElementById("selectAllTopics"),
+      clearAllTopics: document.getElementById("clearAllTopics"),
+      selectAllCopyDates: document.getElementById("selectAllCopyDates"),
+      clearAllCopyDates: document.getElementById("clearAllCopyDates"),
+      copyTopicsBtn: document.getElementById("copyTopicsBtn"),
+      cancelCopyTopics: document.getElementById("cancelCopyTopics"),
+      copyPreview: document.getElementById("copyPreview"),
+      topicsCount: document.getElementById("topicsCount"),
+      datesCount: document.getElementById("datesCount"),
+      totalEntries: document.getElementById("totalEntries")
     };
 
     // State management
@@ -129,6 +265,7 @@
     let currentData = [];
     let expandedTopics = new Set();
     let currentDateRange = [];
+    let selectedSourceDateForCopy = null;
 
     // IST Timezone utility functions
     function getCurrentISTTime() {
@@ -257,6 +394,199 @@
       };
     }
 
+    // ENHANCED COPY TOPICS FUNCTIONALITY
+    function showCopyTopicsModal(sourceDate) {
+      selectedSourceDateForCopy = sourceDate;
+      
+      // Get all topics from the source date
+      const sourceTopics = currentData.filter(entry => entry.date === sourceDate && entry.topic);
+      
+      if (sourceTopics.length === 0) {
+        alert("No topics found for this date. Please add some topics first.");
+        return;
+      }
+      
+      DOM.selectedSourceDate.textContent = sourceDate;
+      populateSourceTopics(sourceTopics);
+      populateCopyDateCheckboxes(sourceDate);
+      updateCopySummary();
+      DOM.copyTopicsModal.classList.remove("hidden");
+    }
+
+    function populateSourceTopics(sourceTopics) {
+      let html = '';
+      sourceTopics.forEach((entry, index) => {
+        html += `
+          <div class="flex items-start mb-3 p-3 bg-white/10 rounded-lg hover:bg-white/20">
+            <input type="checkbox" id="topic_${entry.id}" class="topic-checkbox mr-3 mt-1" 
+              value="${entry.id}" data-topic="${escapeHtml(entry.topic)}" onchange="updateCopySummary()" />
+            <label for="topic_${entry.id}" class="cursor-pointer flex-1">
+              <div class="text-white font-medium">${escapeHtml(entry.topic)}</div>
+              ${entry.sub_topic ? `<div class="text-white/70 text-sm">Sub: ${escapeHtml(entry.sub_topic)}</div>` : ''}
+              ${entry.notes ? `<div class="text-white/60 text-xs mt-1">${escapeHtml(entry.notes.substring(0, 50))}${entry.notes.length > 50 ? '...' : ''}</div>` : ''}
+              <div class="text-white/50 text-xs mt-1">
+                ${entry.completed ? '✅ Completed' : '⏸️ In Progress'}
+              </div>
+            </label>
+          </div>
+        `;
+      });
+      DOM.sourceTopicsContainer.innerHTML = html;
+    }
+
+    function hideCopyTopicsModal() {
+      DOM.copyTopicsModal.classList.add("hidden");
+      selectedSourceDateForCopy = null;
+      
+      // Remove any highlighting
+      document.querySelectorAll('.selected-source-date').forEach(row => {
+        row.classList.remove('selected-source-date');
+      });
+    }
+
+    function populateCopyDateCheckboxes(excludeDate) {
+      let html = '';
+      currentDateRange.forEach(dateStr => {
+        if (dateStr !== excludeDate) { // Don't show the source date
+          const dayName = new Date(dateStr).toLocaleDateString('en-IN', { 
+            weekday: 'short', 
+            timeZone: 'Asia/Kolkata' 
+          });
+          
+          // Check if this date already has entries
+          const hasEntries = currentData.some(entry => entry.date === dateStr);
+          const entryCount = currentData.filter(entry => entry.date === dateStr).length;
+          
+          html += `
+            <div class="flex items-center mb-2 p-2 hover:bg-white/10 rounded">
+              <input type="checkbox" id="copy_date_${dateStr}" class="date-checkbox mr-3" 
+                value="${dateStr}" onchange="updateCopySummary()" />
+              <label for="copy_date_${dateStr}" class="text-white/90 cursor-pointer flex-1">
+                ${dateStr} (${dayName})
+                ${hasEntries ? `<span class="ml-2 text-xs text-yellow-300">${entryCount} entries</span>` : 
+                  '<span class="ml-2 text-xs text-green-300">empty</span>'}
+              </label>
+            </div>
+          `;
+        }
+      });
+      
+      if (html === '') {
+        html = '<div class="text-white/70 text-center py-4">No other dates available</div>';
+      }
+      
+      DOM.copyDateCheckboxContainer.innerHTML = html;
+    }
+
+    function updateCopySummary() {
+      const selectedTopics = DOM.sourceTopicsContainer.querySelectorAll('input[type="checkbox"]:checked');
+      const selectedDates = DOM.copyDateCheckboxContainer.querySelectorAll('input[type="checkbox"]:checked');
+      
+      const topicsCount = selectedTopics.length;
+      const datesCount = selectedDates.length;
+      const totalEntries = topicsCount * datesCount;
+      
+      DOM.topicsCount.textContent = topicsCount;
+      DOM.datesCount.textContent = datesCount;
+      DOM.totalEntries.textContent = totalEntries;
+      
+      // Update preview with clarification
+      if (topicsCount > 0 && datesCount > 0) {
+        const topicNames = Array.from(selectedTopics).map(cb => cb.dataset.topic);
+        const datesList = Array.from(selectedDates).map(cb => cb.value);
+        
+        DOM.copyPreview.innerHTML = `
+          <div class="text-white/90"><strong>📋 Topics to copy:</strong> ${topicNames.join(', ')}</div>
+          <div class="text-white/90 mt-1"><strong>📅 To dates:</strong> ${datesList.join(', ')}</div>
+          <div class="text-green-300 mt-2"><strong>✨ What gets copied:</strong></div>
+          <div class="text-white/80 text-xs mt-1">
+            • Topic names only ✅<br>
+            • Sub-topics: Empty (add new ones) ❌<br>
+            • Notes: Empty (add new content) ❌<br>
+            • Completed: Unchecked (ready to work) ❌
+          </div>
+          <div class="text-green-300 mt-2">${totalEntries} fresh entries will be created</div>
+        `;
+      } else {
+        DOM.copyPreview.textContent = "Select topics and dates to see preview";
+      }
+    }
+
+    // ENHANCED: Copy topics function with unchecked completion and topic-only copying
+    async function handleCopyTopics() {
+      const selectedTopicCheckboxes = DOM.sourceTopicsContainer.querySelectorAll('input[type="checkbox"]:checked');
+      const selectedDateCheckboxes = DOM.copyDateCheckboxContainer.querySelectorAll('input[type="checkbox"]:checked');
+
+      if (selectedTopicCheckboxes.length === 0) {
+        alert("Please select at least one topic to copy");
+        return;
+      }
+
+      if (selectedDateCheckboxes.length === 0) {
+        alert("Please select at least one date to copy to");
+        return;
+      }
+
+      // Get selected data - only extract topic names
+      const selectedTopicNames = Array.from(selectedTopicCheckboxes).map(cb => {
+        const topicId = cb.value;
+        const topicEntry = currentData.find(entry => entry.id == topicId);
+        return topicEntry.topic; // Only get the topic name
+      });
+
+      const selectedDates = Array.from(selectedDateCheckboxes).map(cb => cb.value);
+
+      // Confirm copy operation
+      const topicNames = selectedTopicNames.join(', ');
+      const confirmMsg = `Copy ${selectedTopicNames.length} topics to ${selectedDates.length} dates?\n\n📋 Topics: ${topicNames}\n📅 Dates: ${selectedDates.join(', ')}\n\n✨ Details:\n• Sub-topics: Will be empty (you can add new ones)\n• Notes: Will be empty (you can add new ones)\n• Completed: Will be unchecked (ready for new work)\n\nTotal: ${selectedTopicNames.length * selectedDates.length} entries will be created`;
+      
+      if (!confirm(confirmMsg)) return;
+
+      // Disable button during operation
+      DOM.copyTopicsBtn.disabled = true;
+      DOM.copyTopicsBtn.innerHTML = `<span class="animate-spin">🔄</span> Copying ${selectedTopicNames.length * selectedDates.length} entries...`;
+
+      try {
+        // Prepare data for bulk insert - TOPIC ONLY with fresh start
+        const insertData = [];
+        
+        selectedDates.forEach(date => {
+          selectedTopicNames.forEach(topicName => {
+            insertData.push({
+              date: date,
+              topic: topicName,           // ✅ Copy topic name
+              sub_topic: '',              // ❌ Always empty - user adds new sub-topics
+              notes: '',                  // ❌ Always empty - user adds new notes
+              completed: false,           // ❌ Always unchecked - ready for new work
+              completed_at: null          // ❌ No completion time
+            });
+          });
+        });
+
+        // Bulk insert
+        const { data: insertedData, error } = await client
+          .from("study_log")
+          .insert(insertData)
+          .select();
+
+        if (error) throw error;
+
+        const successMsg = `✅ Successfully copied!\n\n📋 ${selectedTopicNames.length} topics → ${selectedDates.length} dates\n🆕 ${insertData.length} fresh entries created\n\n💡 All entries are:\n• Unchecked (ready to work on)\n• Empty sub-topics (add your new ones)\n• Empty notes (add your new content)`;
+        alert(successMsg);
+        
+        hideCopyTopicsModal();
+
+        // Refresh data to show new entries
+        await refreshCurrentData();
+
+      } catch (error) {
+        alert("❌ Copy failed: " + error.message);
+      } finally {
+        DOM.copyTopicsBtn.disabled = false;
+        DOM.copyTopicsBtn.innerHTML = '<span class="text-lg mr-2">📋</span> Copy Topics to Selected Dates';
+      }
+    }
+
     // FIXED: Refresh grouped data function with state preservation
     async function refreshGroupedData() {
       const refreshBtn = document.getElementById('refreshGroupedBtn');
@@ -303,6 +633,16 @@
       }
     }
 
+    async function refreshCurrentData() {
+      const startDate = DOM.startDate.value;
+      const endDate = DOM.endDate.value;
+      if (!startDate || !endDate) return;
+      
+      const days = getDateRangeYMD(startDate, endDate);
+      DOM.rangeSummary.textContent = summarizeRange(startDate, endDate);
+      await loadData(days, startDate, endDate);
+    }
+
     // GLOBAL: Functions for expand/collapse all
     function expandAllTopics() {
       expandedTopics.clear();
@@ -328,11 +668,30 @@
       renderTopicGroupedView(currentData);
     }
 
-    // ENHANCED Event setup with FIXED expand/collapse all functionality
+    // ENHANCED Event setup with multi-copy topic functionality
     function setupEventDelegation() {
       if (eventsAttached) return;
       
       DOM.tableContainer.addEventListener("click", async (e) => {
+        // Handle copy topics button (date-based)
+        if (e.target.matches(".copy-topics-from-date") || e.target.closest('.copy-topics-from-date')) {
+          const button = e.target.closest('.copy-topics-from-date');
+          const date = button.dataset.date;
+          
+          // Highlight the selected date rows
+          document.querySelectorAll('.selected-source-date').forEach(row => {
+            row.classList.remove('selected-source-date');
+          });
+          
+          // Highlight all rows from this date
+          document.querySelectorAll(`tr[data-date="${date}"]`).forEach(row => {
+            row.classList.add('selected-source-date');
+          });
+          
+          showCopyTopicsModal(date);
+          return;
+        }
+
         // Handle refresh button click
         if (e.target.id === 'refreshGroupedBtn' || e.target.closest('#refreshGroupedBtn')) {
           await refreshGroupedData();
@@ -376,6 +735,42 @@
           await handleSave(e);
         } else if (e.target.matches(".delete")) {
           await handleDelete(e);
+        }
+      });
+
+      // Copy topics modal event listeners
+      DOM.closeCopyModal.addEventListener('click', hideCopyTopicsModal);
+      DOM.cancelCopyTopics.addEventListener('click', hideCopyTopicsModal);
+      DOM.copyTopicsBtn.addEventListener('click', handleCopyTopics);
+      
+      DOM.selectAllTopics.addEventListener('click', () => {
+        const checkboxes = DOM.sourceTopicsContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = true);
+        updateCopySummary();
+      });
+
+      DOM.clearAllTopics.addEventListener('click', () => {
+        const checkboxes = DOM.sourceTopicsContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCopySummary();
+      });
+      
+      DOM.selectAllCopyDates.addEventListener('click', () => {
+        const checkboxes = DOM.copyDateCheckboxContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = true);
+        updateCopySummary();
+      });
+
+      DOM.clearAllCopyDates.addEventListener('click', () => {
+        const checkboxes = DOM.copyDateCheckboxContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCopySummary();
+      });
+
+      // Close modal when clicking outside
+      DOM.copyTopicsModal.addEventListener('click', (e) => {
+        if (e.target === DOM.copyTopicsModal) {
+          hideCopyTopicsModal();
         }
       });
 
@@ -579,7 +974,7 @@
         // Topic master row
         html += createTopicMasterRowGrouped(topicName, subtopics, isExpanded, colorClass);
         
-        // Subtopic detail rows (only if expanded) - NO ADD BUTTONS
+        // Subtopic detail rows (only if expanded) - FULLY EDITABLE
         if (isExpanded) {
           subtopics.forEach((subtopic, index) => {
             html += createSubtopicDetailRowGrouped(subtopic, index);
@@ -591,7 +986,7 @@
       DOM.tableContainer.innerHTML = html;
     }
 
-    // Flat view rendering that maintains ALL date rows
+    // Flat view rendering that maintains ALL date rows with copy button per date
     function renderFlatView(data) {
       const byDate = new Map();
       const dataLength = data?.length || 0;
@@ -633,8 +1028,8 @@
             html += createFlatRow(dateStr, year, log, colorClass);
           });
           
-          // ALWAYS add an empty "Add" row for each date
-          html += createFlatRow(dateStr, year, null, "bg-gray-50");
+          // ALWAYS add an empty "Add" row for each date with copy button
+          html += createFlatRow(dateStr, year, null, "bg-gray-50", true);
         });
       }
 
@@ -680,6 +1075,7 @@
       `;
     }
 
+    // FIXED: Make subtopic detail rows fully editable in grouped view
     function createSubtopicDetailRowGrouped(subtopic, index) {
       return `
         <tr class="subtopic-row">
@@ -688,11 +1084,13 @@
           </td>
           <td class="border px-3 py-2 text-sm">${subtopic.date}</td>
           <td class="border px-3 py-2">
-            <input type="text" class="subtopic border p-1 rounded w-full" 
-              value="${escapeHtml(subtopic.sub_topic || '')}" />
+            <input type="text" class="subtopic border p-1 rounded w-full bg-white" 
+              value="${escapeHtml(subtopic.sub_topic || '')}" 
+              placeholder="Add sub-topic here..." />
           </td>
           <td class="border px-3 py-2">
-            <textarea class="notes border p-1 rounded w-full" rows="2">${escapeHtml(subtopic.notes || '')}</textarea>
+            <textarea class="notes border p-1 rounded w-full bg-white" rows="2" 
+              placeholder="Add detailed notes here...">${escapeHtml(subtopic.notes || '')}</textarea>
           </td>
           <td class="border px-3 py-2 text-center">
             <input type="checkbox" class="completed" ${subtopic.completed ? "checked" : ""} />
@@ -711,14 +1109,15 @@
       `;
     }
 
-    function createFlatRow(dateStr, year, log, colorClass) {
+    // ENHANCED: Flat row creation with multi-copy button per date
+    function createFlatRow(dateStr, year, log, colorClass, isAddRow = false) {
       const topicValue = log ? escapeHtml(log.topic || "") : "";
       const subtopicValue = log ? escapeHtml(log.sub_topic || "") : "";
       const notesValue = log ? escapeHtml(log.notes || "") : "";
       const isCompleted = log && log.completed;
       
       return `
-        <tr class="${colorClass} hover:bg-gray-50" ${log ? `data-id="${log.id}"` : ''}>
+        <tr class="${colorClass} hover:bg-gray-50" ${log ? `data-id="${log.id}"` : ''} data-date="${dateStr}">
           <td class="border px-3 py-2">${dateStr}</td>
           <td class="border px-3 py-2">${year}</td>
           <td class="border px-3 py-2">
@@ -738,41 +1137,61 @@
               (log.created_at ? formatISTDateTime(log.created_at) : 'Not set')) : 'Will be set'}
           </td>
           <td class="border px-3 py-2 text-center">
-            <button type="button" class="save bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded mr-1"
-              data-id="${log ? log.id : ""}" data-date="${dateStr}">
-              ${log ? "Save" : "Add"}
-            </button>
-            ${log ? `<button type="button" class="delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded" data-id="${log.id}">Delete</button>` : ""}
+            <div class="flex flex-wrap gap-1 justify-center">
+              <button type="button" class="save bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs"
+                data-id="${log ? log.id : ""}" data-date="${dateStr}">
+                ${log ? "Save" : "Add"}
+              </button>
+              ${log ? `<button type="button" class="delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs" data-id="${log.id}">Del</button>` : ""}
+              ${isAddRow || (log && currentData.some(entry => entry.date === dateStr && entry.topic)) ? 
+                `<button type="button" class="copy-topics-from-date bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded text-xs" 
+                   data-date="${dateStr}" title="Copy all topics from this date">
+                   📋 Copy from ${dateStr}
+                 </button>` : ""}
+            </div>
           </td>
         </tr>
       `;
     }
 
-    // MODIFIED: Save handler that auto-refreshes grouped view
+    // ENHANCED: Save handler that works in both flat and grouped views
     async function handleSave(e) {
       const btn = e.target;
       const row = btn.closest("tr");
       const id = btn.dataset.id || null;
       const date = btn.dataset.date;
-      const year = date.slice(0, 4);
 
       // Prevent double-click
       const opKey = `save-${id ?? "new"}-${date}`;
       if (operationTracker.has(opKey)) return;
       operationTracker.add(opKey);
 
-      // Gather form data
+      // Gather form data from the row
+      const topicInput = row.querySelector(".topic");
+      const subtopicInput = row.querySelector(".subtopic");
+      const notesInput = row.querySelector(".notes");
+      const completedInput = row.querySelector(".completed");
+
       const data = {
-        topic: row.querySelector(".topic").value.trim(),
-        sub_topic: row.querySelector(".subtopic").value.trim(),
-        notes: row.querySelector(".notes").value.trim(),
-        completed: row.querySelector(".completed").checked,
-        completed_at: row.querySelector(".completed").checked ? getISTTimestamp() : null,
+        topic: topicInput ? topicInput.value.trim() : "",
+        sub_topic: subtopicInput ? subtopicInput.value.trim() : "",
+        notes: notesInput ? notesInput.value.trim() : "",
+        completed: completedInput ? completedInput.checked : false,
+        completed_at: (completedInput && completedInput.checked) ? getISTTimestamp() : null,
         date
       };
 
+      // For grouped view subtopic rows, the topic is already set and not editable
+      if (row.classList.contains('subtopic-row') && id) {
+        // Find the original topic from currentData
+        const originalEntry = currentData.find(entry => entry.id == id);
+        if (originalEntry) {
+          data.topic = originalEntry.topic; // Keep original topic
+        }
+      }
+
       if (!data.topic && !data.sub_topic && !data.notes) {
-        alert("Please fill something before adding");
+        alert("Please fill at least a topic, sub-topic, or notes before saving");
         operationTracker.delete(opKey);
         return;
       }
@@ -800,7 +1219,7 @@
         // Update currentData cache
         if (id) {
           // Update existing entry in cache
-          const index = currentData.findIndex(item => item.id === id);
+          const index = currentData.findIndex(item => item.id == id);
           if (index !== -1) {
             currentData[index] = saved;
           }
@@ -813,8 +1232,9 @@
         const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
         
         if (viewMode === 'grouped') {
-          // For grouped view, just re-render with updated data
+          // For grouped view, preserve expanded state and re-render
           renderTopicGroupedView(currentData);
+          
         } else {
           // For flat view, use DOM patching as before
           row.dataset.id = saved.id;
@@ -822,13 +1242,17 @@
           btn.textContent = "Save";
           btn.disabled = false;
 
-          // Add Delete button if it wasn't there
-          if (!row.querySelector(".delete")) {
-            const del = document.createElement("button");
-            del.className = "delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded ml-1";
-            del.dataset.id = saved.id;
-            del.textContent = "Delete";
-            btn.after(del);
+          // Update the actions column
+          const actionsCell = row.children[7];
+          const actionDiv = actionsCell.querySelector('.flex');
+          
+          // Add delete button if not present
+          if (!actionDiv.querySelector(".delete")) {
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs";
+            deleteBtn.dataset.id = saved.id;
+            deleteBtn.textContent = "Del";
+            actionDiv.appendChild(deleteBtn);
           }
 
           // Show updated time
@@ -838,7 +1262,8 @@
 
           // If this was an Add row, append a fresh blank Add row right after it
           if (!id) {
-            const newBlank = createFlatRow(date, year, null, "bg-gray-50");
+            const year = date.slice(0, 4);
+            const newBlank = createFlatRow(date, year, null, "bg-gray-50", true);
             row.insertAdjacentHTML("afterend", newBlank);
           }
         }
@@ -888,7 +1313,7 @@
         } catch (error) {
           alert("Delete failed: " + error.message);
           button.disabled = false;
-          button.textContent = "Delete";
+          button.textContent = "Del";
         } finally {
           operationTracker.delete(operationKey);
         }

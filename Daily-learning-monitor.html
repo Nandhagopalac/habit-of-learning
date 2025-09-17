@@ -299,42 +299,55 @@
       
       if (refreshBtn) {
         refreshBtn.disabled = false;
-        refreshBtn.innerHTML = '🔄 Refresh';
+        refreshBtn.innerHTML = '<span>🔄</span><span>Refresh</span>';
       }
     }
 
-    // ENHANCED Event setup with expand/collapse all functionality
+    // GLOBAL: Functions for expand/collapse all
+    function expandAllTopics() {
+      expandedTopics.clear();
+      
+      // Get all unique topics from current data
+      const uniqueTopics = new Set();
+      currentData.forEach(entry => {
+        const topicKey = entry.topic || "Untitled Topic";
+        uniqueTopics.add(topicKey);
+      });
+      
+      // Add all topics to expanded set
+      uniqueTopics.forEach(topic => {
+        expandedTopics.add(topic);
+      });
+      
+      // Re-render with all topics expanded
+      renderTopicGroupedView(currentData);
+    }
+
+    function collapseAllTopics() {
+      expandedTopics.clear();
+      renderTopicGroupedView(currentData);
+    }
+
+    // ENHANCED Event setup with FIXED expand/collapse all functionality
     function setupEventDelegation() {
       if (eventsAttached) return;
       
       DOM.tableContainer.addEventListener("click", async (e) => {
         // Handle refresh button click
-        if (e.target.id === 'refreshGroupedBtn') {
+        if (e.target.id === 'refreshGroupedBtn' || e.target.closest('#refreshGroupedBtn')) {
           await refreshGroupedData();
           return;
         }
 
-        // Handle expand all button
-        if (e.target.id === 'expandAllBtn') {
-          // Add all topics to expanded set
-          const groupedByTopic = new Map();
-          currentData.forEach(entry => {
-            const topicKey = entry.topic || "Untitled Topic";
-            groupedByTopic.set(topicKey, true);
-          });
-          
-          Array.from(groupedByTopic.keys()).forEach(topic => {
-            expandedTopics.add(topic);
-          });
-          
-          renderTopicGroupedView(currentData);
+        // FIXED: Handle expand all button
+        if (e.target.id === 'expandAllBtn' || e.target.closest('#expandAllBtn')) {
+          expandAllTopics();
           return;
         }
 
-        // Handle collapse all button
-        if (e.target.id === 'collapseAllBtn') {
-          expandedTopics.clear();
-          renderTopicGroupedView(currentData);
+        // FIXED: Handle collapse all button
+        if (e.target.id === 'collapseAllBtn' || e.target.closest('#collapseAllBtn')) {
+          collapseAllTopics();
           return;
         }
 
@@ -510,7 +523,7 @@
         return;
       }
 
-      // ENHANCED: Header with expand/collapse all buttons
+      // ENHANCED: Header with FIXED expand/collapse all buttons using onclick
       let html = `
         <div class="mb-4 flex items-center justify-center space-x-4 flex-wrap">
           <div class="inline-flex bg-indigo-100 rounded-lg p-1">
@@ -524,18 +537,20 @@
             <span>🔄</span>
             <span>Refresh</span>
           </button>
-          <button id="expandAllBtn" 
-                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium"
+          <button onclick="expandAllTopics()" 
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-1"
                   title="Expand all topics">
-            <span>📖 Expand All</span>
+            <span>📖</span>
+            <span>Expand All</span>
           </button>
-          <button id="collapseAllBtn" 
-                  class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm font-medium"
+          <button onclick="collapseAllTopics()" 
+                  class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-1"
                   title="Collapse all topics">
-            <span>📕 Collapse All</span>
+            <span>📕</span>
+            <span>Collapse All</span>
           </button>
           <div class="text-xs text-gray-500">
-            Last updated: ${formatISTDateTime(new Date())}
+            Expanded: ${expandedTopics.size}/${groupedByTopic.size} • Last updated: ${formatISTDateTime(new Date())}
           </div>
         </div>
         <table class="table-auto border-collapse w-full bg-white shadow rounded-lg overflow-hidden">

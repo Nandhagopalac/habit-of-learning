@@ -1,131 +1,919 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Learning Monitor</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Learning Tracker - Enhanced</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    .topic-row {
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .topic-row:hover {
+      background-color: #f3f4f6 !important;
+    }
+    .subtopic-row {
+      background-color: #f9fafb;
+      border-left: 4px solid #6366f1;
+    }
+    .expand-icon {
+      transition: transform 0.3s;
+      display: inline-block;
+      width: 16px;
+      text-align: center;
+    }
+    .expand-icon.expanded {
+      transform: rotate(90deg);
+    }
+    .topic-summary {
+      font-weight: 600;
+      color: #374151;
+    }
+    .subtopic-count {
+      background-color: #6366f1;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .time-display {
+      color: #6b7280;
+      font-size: 0.75rem;
+      font-style: italic;
+    }
+    .refresh-btn {
+      transition: transform 0.2s;
+    }
+    .refresh-btn:hover {
+      transform: rotate(90deg);
+    }
+    .refresh-btn:active {
+      transform: rotate(180deg);
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen p-6">
-  <div class="max-w-7xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">📘 Daily Learning Monitor</h1>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-6">
+  <h1 class="text-3xl font-bold mb-6 text-indigo-700">📚 Daily Learning Tracker</h1>
 
-    <!-- Date Range Picker -->
-    <div class="flex gap-4 mb-6">
-      <div>
-        <label class="block font-medium">Start Date</label>
-        <input type="date" id="startDate" class="p-2 rounded border" />
-      </div>
-      <div>
-        <label class="block font-medium">End Date</label>
-        <input type="date" id="endDate" class="p-2 rounded border" />
-      </div>
-      <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded self-end">Generate Table</button>
+  <!-- Date Range Picker -->
+  <div class="bg-white shadow-md rounded-lg p-4 mb-6 w-11/12 md:w-2/3 flex flex-col md:flex-row gap-4 justify-center">
+    <div class="flex-1">
+      <label class="font-semibold text-gray-700">Start Date:</label>
+      <input id="startDate" type="date" class="border rounded p-2 w-full" />
     </div>
+    <div class="flex-1">
+      <label class="font-semibold text-gray-700">End Date:</label>
+      <input id="endDate" type="date" class="border rounded p-2 w-full" />
+    </div>
+    <button id="generateTable" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded shadow self-end">
+      Generate
+    </button>
+  </div>
 
-    <!-- Progress Summary -->
-    <div id="progressSummary" class="mb-4 font-semibold"></div>
-
-    <!-- Learning Table -->
-    <div class="overflow-x-auto">
-      <table id="learningTable" class="min-w-full border border-gray-300 bg-white dark:bg-gray-800">
-        <thead class="bg-gray-200 dark:bg-gray-700"></thead>
-        <tbody></tbody>
-      </table>
+  <!-- View Toggle -->
+  <div class="bg-white shadow-md rounded-lg p-4 mb-6 w-11/12 md:w-2/3">
+    <div class="flex items-center justify-center space-x-4">
+      <label class="flex items-center">
+        <input type="radio" name="viewMode" value="flat" class="mr-2" checked>
+        <span class="text-sm font-medium text-gray-700">Flat View (with Add buttons)</span>
+      </label>
+      <label class="flex items-center">
+        <input type="radio" name="viewMode" value="grouped" class="mr-2">
+        <span class="text-sm font-medium text-gray-700">Topic Grouped View (read-only)</span>
+      </label>
     </div>
   </div>
 
+  <!-- Range summary -->
+  <div id="rangeSummary" class="w-11/12 md:w-5/6 mb-4 text-sm text-gray-700"></div>
+
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" class="hidden">
+    <div class="bg-blue-50 border border-blue-200 text-blue-700 p-3 rounded">
+      Loading data...
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div id="tableContainer" class="w-11/12 md:w-5/6"></div>
+
+  <!-- Safelist Tailwind bg-* shades used dynamically -->
+  <div class="hidden">
+    <span class="bg-rose-50 bg-amber-50 bg-emerald-50 bg-sky-50 bg-indigo-50 bg-fuchsia-50 bg-lime-50 bg-cyan-50 bg-violet-50 bg-orange-50"></span>
+  </div>
+
   <script>
-    const topics = [
-      { topic: "System Design", sub: "", time: 15 },
-      { topic: "Data Engineering - Quantexa", sub: "", time: 30 },
-      { topic: "SQL/Postgres", sub: "", time: 15 },
-      { topic: "Scala Programming", sub: "", time: 30 },
-      { topic: "AWS Concepts", sub: "", time: 30 },
-      { topic: "Vocabulary Improvement", sub: "", time: 10 }
+    // Supabase credentials
+    const SUPABASE_URL = "https://ppumpgzvmrkjehfykukx.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwdW1wZ3p2bXJramVoZnlrdWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMTIwMDYsImV4cCI6MjA3MzU4ODAwNn0.jnF_blCnEY6azP6IEuRsVjon0ZDMuCUt6joFfmetzME";
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Cache DOM elements
+    const DOM = {
+      startDate: document.getElementById("startDate"),
+      endDate: document.getElementById("endDate"),
+      generateBtn: document.getElementById("generateTable"),
+      rangeSummary: document.getElementById("rangeSummary"),
+      tableContainer: document.getElementById("tableContainer"),
+      loadingIndicator: document.getElementById("loadingIndicator"),
+      viewModeInputs: document.querySelectorAll('input[name="viewMode"]')
+    };
+
+    // State management
+    let eventsAttached = false;
+    const operationTracker = new Set();
+    const cache = new Map();
+    let currentData = [];
+    let expandedTopics = new Set();
+    let currentDateRange = [];
+
+    // IST Timezone utility functions
+    function getCurrentISTTime() {
+      return new Date().toLocaleString("en-IN", { 
+        timeZone: 'Asia/Kolkata',
+        hour12: false 
+      });
+    }
+
+    function convertUTCToIST(utcString) {
+      if (!utcString) return '';
+      try {
+        const date = new Date(utcString);
+        return date.toLocaleString("en-IN", { 
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+      } catch (error) {
+        console.error('Error converting UTC to IST:', error);
+        return utcString;
+      }
+    }
+
+    function getISTTimestamp() {
+      const now = new Date();
+      const istTime = new Date(now.getTime() + (330 * 60 * 1000));
+      return istTime.toISOString();
+    }
+
+    function formatISTDateTime(date) {
+      if (!date) return '';
+      try {
+        const d = new Date(date);
+        return d.toLocaleString("en-IN", { 
+          timeZone: 'Asia/Kolkata',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (error) {
+        return date;
+      }
+    }
+
+    // Optimized utility functions
+    function makeLocalDate(strYMD) {
+      const cached = cache.get(`date_${strYMD}`);
+      if (cached) return cached;
+      const [y, m, d] = strYMD.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      cache.set(`date_${strYMD}`, date);
+      return date;
+    }
+
+    function formatYMDLocal(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function getDateRangeYMD(startStr, endStr) {
+      const cacheKey = `range_${startStr}_${endStr}`;
+      const cached = cache.get(cacheKey);
+      if (cached) return cached;
+      
+      const start = makeLocalDate(startStr);
+      const end = makeLocalDate(endStr);
+      const days = [];
+      const current = new Date(start);
+      
+      while (current <= end) {
+        days.push(formatYMDLocal(current));
+        current.setDate(current.getDate() + 1);
+      }
+      
+      cache.set(cacheKey, days);
+      return days;
+    }
+
+    function summarizeRange(startStr, endStr) {
+      const y1 = startStr.slice(0, 4);
+      const y2 = endStr.slice(0, 4);
+      const yearsText = y1 === y2 ? y1 : `${y1} – ${y2}`;
+      return `Range: ${startStr} → ${endStr} • Years: ${yearsText} • Current IST: ${getCurrentISTTime()}`;
+    }
+
+    // Color system
+    const palette = [
+      "bg-rose-50","bg-amber-50","bg-emerald-50","bg-sky-50","bg-indigo-50",
+      "bg-fuchsia-50","bg-lime-50","bg-cyan-50","bg-violet-50","bg-orange-50"
     ];
 
-    const table = document.getElementById("learningTable");
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-    const summary = document.getElementById("progressSummary");
+    function hashTopic(s) {
+      const cacheKey = `color_${s}`;
+      const cached = cache.get(cacheKey);
+      if (cached !== undefined) return cached;
+      
+      s = String(s || "");
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) + h) + s.charCodeAt(i);
+      }
+      const hash = Math.abs(h);
+      cache.set(cacheKey, hash);
+      return hash;
+    }
 
-    document.getElementById("generateBtn").addEventListener("click", () => {
-      const startDate = new Date(document.getElementById("startDate").value);
-      const endDate = new Date(document.getElementById("endDate").value);
-      if (!startDate || !endDate || startDate > endDate) {
-        alert("Please select a valid date range.");
+    function colorForTopic(topic, index = 0) {
+      const idx = topic ? hashTopic(topic) % palette.length : (index % palette.length);
+      return palette[idx];
+    }
+
+    // Debounce function
+    function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    // FIXED: Refresh grouped data function with state preservation
+    async function refreshGroupedData() {
+      const refreshBtn = document.getElementById('refreshGroupedBtn');
+      if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '🔄 Refreshing...';
+      }
+      
+      const startDate = DOM.startDate.value;
+      const endDate = DOM.endDate.value;
+      
+      if (startDate && endDate) {
+        showLoading(true);
+        
+        try {
+          // Fresh data fetch from database
+          const { data: logs, error } = await client
+            .from("study_log")
+            .select("id, date, topic, sub_topic, notes, completed, completed_at, created_at, updated_at")
+            .gte("date", startDate)
+            .lte("date", endDate)
+            .order("topic", { ascending: true })
+            .order("date", { ascending: true })
+            .order("id", { ascending: true });
+
+          if (error) throw error;
+
+          // Update current data cache
+          currentData = logs || [];
+          
+          // Force re-render of grouped view with preserved expanded state
+          renderTopicGroupedView(currentData);
+          
+        } catch (error) {
+          alert("Refresh failed: " + error.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+      
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '🔄 Refresh';
+      }
+    }
+
+    // ENHANCED Event setup with expand/collapse all functionality
+    function setupEventDelegation() {
+      if (eventsAttached) return;
+      
+      DOM.tableContainer.addEventListener("click", async (e) => {
+        // Handle refresh button click
+        if (e.target.id === 'refreshGroupedBtn') {
+          await refreshGroupedData();
+          return;
+        }
+
+        // Handle expand all button
+        if (e.target.id === 'expandAllBtn') {
+          // Add all topics to expanded set
+          const groupedByTopic = new Map();
+          currentData.forEach(entry => {
+            const topicKey = entry.topic || "Untitled Topic";
+            groupedByTopic.set(topicKey, true);
+          });
+          
+          Array.from(groupedByTopic.keys()).forEach(topic => {
+            expandedTopics.add(topic);
+          });
+          
+          renderTopicGroupedView(currentData);
+          return;
+        }
+
+        // Handle collapse all button
+        if (e.target.id === 'collapseAllBtn') {
+          expandedTopics.clear();
+          renderTopicGroupedView(currentData);
+          return;
+        }
+
+        // Handle topic row expansion/collapse
+        if (e.target.closest('.topic-row') && !e.target.closest('input, button, textarea')) {
+          const topicRow = e.target.closest('.topic-row');
+          const topic = topicRow.dataset.topic;
+          
+          if (expandedTopics.has(topic)) {
+            expandedTopics.delete(topic);
+          } else {
+            expandedTopics.add(topic);
+          }
+          
+          renderCurrentView();
+          return;
+        }
+
+        // Handle save/delete operations
+        if (e.target.matches(".save") || e.target.matches(".delete")) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        if (e.target.matches(".save")) {
+          await handleSave(e);
+        } else if (e.target.matches(".delete")) {
+          await handleDelete(e);
+        }
+      });
+
+      // View mode change handler with auto-refresh for grouped mode
+      DOM.viewModeInputs.forEach(input => {
+        input.addEventListener('change', async () => {
+          if (input.value === 'grouped' && input.checked) {
+            // Auto-refresh when switching to grouped view
+            const startDate = DOM.startDate.value;
+            const endDate = DOM.endDate.value;
+            if (startDate && endDate && currentData.length === 0) {
+              const days = getDateRangeYMD(startDate, endDate);
+              await loadData(days, startDate, endDate);
+            } else {
+              renderCurrentView();
+            }
+          } else {
+            renderCurrentView();
+          }
+        });
+      });
+      
+      eventsAttached = true;
+    }
+
+    // Main generation function
+    const debouncedGenerate = debounce(async () => {
+      const startDate = DOM.startDate.value;
+      const endDate = DOM.endDate.value;
+
+      if (!startDate || !endDate) {
+        alert("Please select both dates");
         return;
       }
 
-      generateTable(startDate, endDate);
-    });
-
-    function generateTable(startDate, endDate) {
-      thead.innerHTML = "";
-      tbody.innerHTML = "";
-
-      let dates = [];
-      let current = new Date(startDate);
-      while (current <= endDate) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
+      if (makeLocalDate(startDate) > makeLocalDate(endDate)) {
+        alert("Start Date must be earlier than or equal to End Date");
+        return;
       }
 
-      // Header row
-      let headerRow = "<tr><th class='border px-4 py-2'>Topic</th><th class='border px-4 py-2'>Sub-topic</th><th class='border px-4 py-2'>Time (mins)</th>";
-      dates.forEach(d => {
-        headerRow += `<th class='border px-4 py-2'>${d.toDateString()}</th>`;
-      });
-      headerRow += "</tr>";
-      thead.innerHTML = headerRow;
+      DOM.rangeSummary.textContent = summarizeRange(startDate, endDate);
+      const days = getDateRangeYMD(startDate, endDate);
+      currentDateRange = days;
+      await loadData(days, startDate, endDate);
+    }, 300);
 
-      // Body rows
-      topics.forEach((t, rowIndex) => {
-        let row = `<tr><td class='border px-4 py-2'>${t.topic}</td>`;
-        row += `<td class='border px-4 py-2'><input type='text' data-row='${rowIndex}' data-subtopic class='w-full p-1 rounded border' value='${t.sub}'></td>`;
-        row += `<td class='border px-4 py-2 text-center'>${t.time}</td>`;
-        dates.forEach((d, colIndex) => {
-          const key = `${t.topic}_${d.toDateString()}`;
-          const checked = localStorage.getItem(key) === "true" ? "checked" : "";
-          row += `<td class='border px-4 py-2 text-center'><input type='checkbox' data-key='${key}' ${checked}></td>`;
-        });
-        row += "</tr>";
-        tbody.innerHTML += row;
-      });
+    DOM.generateBtn.addEventListener("click", debouncedGenerate);
 
-      attachEventListeners();
-      updateSummary(dates);
+    // Data loading
+    async function loadData(days, startStr, endStr) {
+      showLoading(true);
+
+      try {
+        const { data: logs, error } = await client
+          .from("study_log")
+          .select("id, date, topic, sub_topic, notes, completed, completed_at, created_at, updated_at")
+          .gte("date", startStr)
+          .lte("date", endStr)
+          .order("topic", { ascending: true })
+          .order("date", { ascending: true })
+          .order("id", { ascending: true });
+
+        if (error) throw error;
+
+        currentData = logs || [];
+        renderCurrentView();
+
+      } catch (error) {
+        DOM.tableContainer.innerHTML = `
+          <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded">
+            Error loading data: ${error.message}
+          </div>
+        `;
+      } finally {
+        showLoading(false);
+      }
     }
 
-    function attachEventListeners() {
-      document.querySelectorAll("input[type='checkbox']").forEach(cb => {
-        cb.addEventListener("change", e => {
-          localStorage.setItem(e.target.dataset.key, e.target.checked);
-          updateSummary();
-        });
-      });
-
-      document.querySelectorAll("[data-subtopic]").forEach(input => {
-        input.addEventListener("input", e => {
-          topics[e.target.dataset.row].sub = e.target.value;
-          localStorage.setItem(`subtopic_${topics[e.target.dataset.row].topic}`, e.target.value);
-        });
-      });
+    // Render based on current view mode
+    function renderCurrentView() {
+      const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+      
+      if (viewMode === 'grouped') {
+        renderTopicGroupedView(currentData);
+      } else {
+        renderFlatView(currentData);
+      }
     }
 
-    function updateSummary(dates = null) {
-      if (!dates) return;
-      let total = 0, done = 0;
-      topics.forEach(t => {
-        dates.forEach(d => {
-          total++;
-          const key = `${t.topic}_${d.toDateString()}`;
-          if (localStorage.getItem(key) === "true") done++;
-        });
+    // ENHANCED: Topic-only grouped view rendering with better state handling
+    function renderTopicGroupedView(data) {
+      // If no data and we have a date range set, try to reload data first
+      if ((!data || data.length === 0) && DOM.startDate.value && DOM.endDate.value) {
+        // Auto-load data if date range is set but no data loaded yet
+        const days = getDateRangeYMD(DOM.startDate.value, DOM.endDate.value);
+        if (days.length > 0 && currentData.length === 0) {
+          loadData(days, DOM.startDate.value, DOM.endDate.value);
+          return; // Exit and let loadData call renderCurrentView again
+        }
+      }
+
+      if (!data || data.length === 0) {
+        DOM.tableContainer.innerHTML = `
+          <div class="bg-white shadow rounded-lg p-4 text-gray-600 text-center">
+            <div class="mb-4">
+              <div class="text-6xl mb-4">📚</div>
+              <p class="text-xl mb-2">No learning data found</p>
+              <p class="text-sm">Select date range and click "Generate" to load your learning entries</p>
+            </div>
+            ${DOM.startDate.value && DOM.endDate.value ? 
+              `<button onclick="document.getElementById('generateTable').click()" 
+                 class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded">
+                 Load Data for ${DOM.startDate.value} to ${DOM.endDate.value}
+               </button>` : ''
+            }
+          </div>
+        `;
+        return;
+      }
+
+      // Group data by topic only (not by date)
+      const groupedByTopic = new Map();
+      
+      data.forEach(entry => {
+        const topicKey = entry.topic || "Untitled Topic";
+        if (!groupedByTopic.has(topicKey)) {
+          groupedByTopic.set(topicKey, []);
+        }
+        groupedByTopic.get(topicKey).push(entry);
       });
-      summary.textContent = `Overall Progress: ${done}/${total} tasks completed`;
+
+      // If still no topics after grouping, show helpful message
+      if (groupedByTopic.size === 0) {
+        DOM.tableContainer.innerHTML = `
+          <div class="bg-white shadow rounded-lg p-4 text-gray-600 text-center">
+            <div class="text-6xl mb-4">🤔</div>
+            <p class="text-xl mb-2">No topics found in selected date range</p>
+            <p class="text-sm mb-4">Switch to "Flat View" to add some learning entries first</p>
+            <button onclick="document.querySelector('input[value=flat]').click()" 
+               class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded">
+               Switch to Flat View
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // ENHANCED: Header with expand/collapse all buttons
+      let html = `
+        <div class="mb-4 flex items-center justify-center space-x-4 flex-wrap">
+          <div class="inline-flex bg-indigo-100 rounded-lg p-1">
+            <span class="bg-indigo-600 text-white px-3 py-1 rounded-md text-sm font-medium">
+              📊 ${groupedByTopic.size} Topics Found
+            </span>
+          </div>
+          <button id="refreshGroupedBtn" 
+                  class="refresh-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-1 shadow-sm"
+                  title="Refresh topic grouping data">
+            <span>🔄</span>
+            <span>Refresh</span>
+          </button>
+          <button id="expandAllBtn" 
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium"
+                  title="Expand all topics">
+            <span>📖 Expand All</span>
+          </button>
+          <button id="collapseAllBtn" 
+                  class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm font-medium"
+                  title="Collapse all topics">
+            <span>📕 Collapse All</span>
+          </button>
+          <div class="text-xs text-gray-500">
+            Last updated: ${formatISTDateTime(new Date())}
+          </div>
+        </div>
+        <table class="table-auto border-collapse w-full bg-white shadow rounded-lg overflow-hidden">
+          <thead class="bg-indigo-600 text-white">
+            <tr>
+              <th class="px-4 py-2 border text-left">Topic</th>
+              <th class="px-4 py-2 border text-left">Date Range</th>
+              <th class="px-4 py-2 border text-left">Sub-topic</th>
+              <th class="px-4 py-2 border text-left">Notes</th>
+              <th class="px-4 py-2 border text-center">Complete</th>
+              <th class="px-4 py-2 border text-center">Updated (IST)</th>
+              <th class="px-4 py-2 border text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Sort topics alphabetically
+      const sortedTopics = Array.from(groupedByTopic.keys()).sort();
+      
+      sortedTopics.forEach((topicName, topicIndex) => {
+        const subtopics = groupedByTopic.get(topicName);
+        const isExpanded = expandedTopics.has(topicName);
+        const colorClass = colorForTopic(topicName, topicIndex);
+        
+        // Topic master row
+        html += createTopicMasterRowGrouped(topicName, subtopics, isExpanded, colorClass);
+        
+        // Subtopic detail rows (only if expanded) - NO ADD BUTTONS
+        if (isExpanded) {
+          subtopics.forEach((subtopic, index) => {
+            html += createSubtopicDetailRowGrouped(subtopic, index);
+          });
+        }
+      });
+
+      html += `</tbody></table>`;
+      DOM.tableContainer.innerHTML = html;
     }
+
+    // Flat view rendering that maintains ALL date rows
+    function renderFlatView(data) {
+      const byDate = new Map();
+      const dataLength = data?.length || 0;
+      
+      // Group existing data by date
+      for (let i = 0; i < dataLength; i++) {
+        const row = data[i];
+        const key = row.date?.slice(0, 10) || "";
+        if (!byDate.has(key)) byDate.set(key, []);
+        byDate.get(key).push(row);
+      }
+
+      let html = `
+        <table class="table-auto border-collapse w-full bg-white shadow rounded-lg overflow-hidden">
+          <thead class="bg-indigo-600 text-white">
+            <tr>
+              <th class="px-4 py-2 border">Date</th>
+              <th class="px-4 py-2 border">Year</th>
+              <th class="px-4 py-2 border">Topic</th>
+              <th class="px-4 py-2 border">Sub-topic</th>
+              <th class="px-4 py-2 border">Notes</th>
+              <th class="px-4 py-2 border">Complete</th>
+              <th class="px-4 py-2 border">Updated (IST)</th>
+              <th class="px-4 py-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Always use the original date range to maintain all date rows
+      if (currentDateRange && currentDateRange.length > 0) {
+        currentDateRange.forEach(dateStr => {
+          const year = dateStr.slice(0, 4);
+          const rows = byDate.get(dateStr) || [];
+          
+          // Show existing entries for this date
+          rows.forEach((log, idx) => {
+            const colorClass = colorForTopic(log.topic, idx);
+            html += createFlatRow(dateStr, year, log, colorClass);
+          });
+          
+          // ALWAYS add an empty "Add" row for each date
+          html += createFlatRow(dateStr, year, null, "bg-gray-50");
+        });
+      }
+
+      html += `</tbody></table>`;
+      DOM.tableContainer.innerHTML = html;
+    }
+
+    // Row creation functions for topic grouped view (NO ADD BUTTONS)
+    function createTopicMasterRowGrouped(topicName, subtopics, isExpanded, colorClass) {
+      const completedCount = subtopics.filter(s => s.completed).length;
+      const totalCount = subtopics.length;
+      const expandIcon = isExpanded ? '▼' : '▶';
+      const lastUpdated = subtopics.length > 0 ? 
+        Math.max(...subtopics.map(s => new Date(s.updated_at || s.created_at).getTime())) : null;
+      const dateRange = subtopics.length > 0 ? 
+        `${Math.min(...subtopics.map(s => s.date))} to ${Math.max(...subtopics.map(s => s.date))}` : 'No dates';
+      
+      return `
+        <tr class="topic-row ${colorClass} hover:bg-gray-50" data-topic="${escapeHtml(topicName)}">
+          <td class="border px-3 py-2">
+            <div class="flex items-center">
+              <span class="expand-icon ${isExpanded ? 'expanded' : ''}">${expandIcon}</span>
+              <span class="topic-summary ml-2">${escapeHtml(topicName)}</span>
+              <span class="subtopic-count">${totalCount}</span>
+              ${completedCount > 0 ? `<span class="ml-2 text-green-600 text-sm">✓ ${completedCount}/${totalCount}</span>` : ''}
+            </div>
+          </td>
+          <td class="border px-3 py-2 text-gray-600 text-sm">${dateRange}</td>
+          <td class="border px-3 py-2 text-gray-500 italic">Click to ${isExpanded ? 'collapse' : 'expand'} subtopics</td>
+          <td class="border px-3 py-2"></td>
+          <td class="border px-3 py-2 text-center">
+            <div class="flex justify-center">
+              <div class="w-16 bg-gray-200 rounded-full h-2">
+                <div class="bg-green-600 h-2 rounded-full" style="width: ${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="border px-3 py-2 text-center time-display">
+            ${lastUpdated ? formatISTDateTime(new Date(lastUpdated)) : 'No updates'}
+          </td>
+          <td class="border px-3 py-2 text-center text-gray-500">Master Row</td>
+        </tr>
+      `;
+    }
+
+    function createSubtopicDetailRowGrouped(subtopic, index) {
+      return `
+        <tr class="subtopic-row">
+          <td class="border px-3 py-2 pl-8">
+            <span class="text-gray-600 text-sm">↳ ${escapeHtml(subtopic.topic || '')}</span>
+          </td>
+          <td class="border px-3 py-2 text-sm">${subtopic.date}</td>
+          <td class="border px-3 py-2">
+            <input type="text" class="subtopic border p-1 rounded w-full" 
+              value="${escapeHtml(subtopic.sub_topic || '')}" />
+          </td>
+          <td class="border px-3 py-2">
+            <textarea class="notes border p-1 rounded w-full" rows="2">${escapeHtml(subtopic.notes || '')}</textarea>
+          </td>
+          <td class="border px-3 py-2 text-center">
+            <input type="checkbox" class="completed" ${subtopic.completed ? "checked" : ""} />
+          </td>
+          <td class="border px-3 py-2 text-center time-display">
+            ${subtopic.updated_at ? formatISTDateTime(subtopic.updated_at) : 
+              (subtopic.created_at ? formatISTDateTime(subtopic.created_at) : 'Not set')}
+          </td>
+          <td class="border px-3 py-2 text-center">
+            <button type="button" class="save bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded mr-1 text-xs"
+              data-id="${subtopic.id}" data-date="${subtopic.date}">Save</button>
+            <button type="button" class="delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs" 
+              data-id="${subtopic.id}">Del</button>
+          </td>
+        </tr>
+      `;
+    }
+
+    function createFlatRow(dateStr, year, log, colorClass) {
+      const topicValue = log ? escapeHtml(log.topic || "") : "";
+      const subtopicValue = log ? escapeHtml(log.sub_topic || "") : "";
+      const notesValue = log ? escapeHtml(log.notes || "") : "";
+      const isCompleted = log && log.completed;
+      
+      return `
+        <tr class="${colorClass} hover:bg-gray-50" ${log ? `data-id="${log.id}"` : ''}>
+          <td class="border px-3 py-2">${dateStr}</td>
+          <td class="border px-3 py-2">${year}</td>
+          <td class="border px-3 py-2">
+            <input type="text" class="topic border p-1 rounded w-full" value="${topicValue}" />
+          </td>
+          <td class="border px-3 py-2">
+            <input type="text" class="subtopic border p-1 rounded w-full" value="${subtopicValue}" />
+          </td>
+          <td class="border px-3 py-2">
+            <textarea class="notes border p-1 rounded w-full" rows="2">${notesValue}</textarea>
+          </td>
+          <td class="border px-3 py-2 text-center">
+            <input type="checkbox" class="completed" ${isCompleted ? "checked" : ""} />
+          </td>
+          <td class="border px-3 py-2 text-center time-display">
+            ${log ? (log.updated_at ? formatISTDateTime(log.updated_at) : 
+              (log.created_at ? formatISTDateTime(log.created_at) : 'Not set')) : 'Will be set'}
+          </td>
+          <td class="border px-3 py-2 text-center">
+            <button type="button" class="save bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded mr-1"
+              data-id="${log ? log.id : ""}" data-date="${dateStr}">
+              ${log ? "Save" : "Add"}
+            </button>
+            ${log ? `<button type="button" class="delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded" data-id="${log.id}">Delete</button>` : ""}
+          </td>
+        </tr>
+      `;
+    }
+
+    // MODIFIED: Save handler that auto-refreshes grouped view
+    async function handleSave(e) {
+      const btn = e.target;
+      const row = btn.closest("tr");
+      const id = btn.dataset.id || null;
+      const date = btn.dataset.date;
+      const year = date.slice(0, 4);
+
+      // Prevent double-click
+      const opKey = `save-${id ?? "new"}-${date}`;
+      if (operationTracker.has(opKey)) return;
+      operationTracker.add(opKey);
+
+      // Gather form data
+      const data = {
+        topic: row.querySelector(".topic").value.trim(),
+        sub_topic: row.querySelector(".subtopic").value.trim(),
+        notes: row.querySelector(".notes").value.trim(),
+        completed: row.querySelector(".completed").checked,
+        completed_at: row.querySelector(".completed").checked ? getISTTimestamp() : null,
+        date
+      };
+
+      if (!data.topic && !data.sub_topic && !data.notes) {
+        alert("Please fill something before adding");
+        operationTracker.delete(opKey);
+        return;
+      }
+
+      // UI feedback
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = id ? "Saving…" : "Adding…";
+
+      try {
+        // Insert or update
+        let saved;
+        if (id) {
+          const { data: d, error } = await client
+            .from("study_log").update(data).eq("id", id).select().single();
+          if (error) throw error;
+          saved = d;
+        } else {
+          const { data: d, error } = await client
+            .from("study_log").insert([data]).select().single();
+          if (error) throw error;
+          saved = d;
+        }
+
+        // Update currentData cache
+        if (id) {
+          // Update existing entry in cache
+          const index = currentData.findIndex(item => item.id === id);
+          if (index !== -1) {
+            currentData[index] = saved;
+          }
+        } else {
+          // Add new entry to cache
+          currentData.push(saved);
+        }
+
+        // Check current view mode and handle accordingly
+        const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+        
+        if (viewMode === 'grouped') {
+          // For grouped view, just re-render with updated data
+          renderTopicGroupedView(currentData);
+        } else {
+          // For flat view, use DOM patching as before
+          row.dataset.id = saved.id;
+          btn.dataset.id = saved.id;
+          btn.textContent = "Save";
+          btn.disabled = false;
+
+          // Add Delete button if it wasn't there
+          if (!row.querySelector(".delete")) {
+            const del = document.createElement("button");
+            del.className = "delete bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded ml-1";
+            del.dataset.id = saved.id;
+            del.textContent = "Delete";
+            btn.after(del);
+          }
+
+          // Show updated time
+          const timeCell = row.children[6]; // "Updated (IST)" column
+          timeCell.textContent = formatISTDateTime(saved.updated_at || saved.created_at);
+          timeCell.className = "border px-3 py-2 text-center time-display";
+
+          // If this was an Add row, append a fresh blank Add row right after it
+          if (!id) {
+            const newBlank = createFlatRow(date, year, null, "bg-gray-50");
+            row.insertAdjacentHTML("afterend", newBlank);
+          }
+        }
+
+      } catch (err) {
+        alert("Save failed: " + (err?.message || err));
+        btn.textContent = original;
+        btn.disabled = false;
+      } finally {
+        operationTracker.delete(opKey);
+      }
+    }
+
+    // MODIFIED: Delete handler that updates grouped view
+    async function handleDelete(e) {
+      const button = e.target;
+      const id = button.dataset.id;
+      if (!id) return;
+      
+      const operationKey = `delete-${id}`;
+      if (operationTracker.has(operationKey)) return;
+      
+      if (confirm("Are you sure you want to delete?")) {
+        operationTracker.add(operationKey);
+        button.disabled = true;
+        button.textContent = "Deleting...";
+        
+        try {
+          const { error } = await client.from("study_log").delete().eq("id", id);
+          if (error) throw error;
+          
+          // Remove from currentData cache
+          currentData = currentData.filter(item => item.id !== id);
+          
+          // Check current view mode and handle accordingly
+          const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+          
+          if (viewMode === 'grouped') {
+            // For grouped view, re-render with updated data
+            renderTopicGroupedView(currentData);
+          } else {
+            // For flat view, remove the row from DOM
+            const row = button.closest("tr");
+            row.remove();
+          }
+          
+        } catch (error) {
+          alert("Delete failed: " + error.message);
+          button.disabled = false;
+          button.textContent = "Delete";
+        } finally {
+          operationTracker.delete(operationKey);
+        }
+      }
+    }
+
+    // ADDED: Auto-load data on page load if dates are set
+    function initializeApp() {
+      // Set default dates (today and next 7 days) if not set
+      if (!DOM.startDate.value || !DOM.endDate.value) {
+        const today = new Date();
+        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        
+        DOM.startDate.value = today.toISOString().split('T')[0];
+        DOM.endDate.value = nextWeek.toISOString().split('T')[0];
+      }
+
+      // Auto-load data if we're in grouped view and have date range
+      const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+      if (viewMode === 'grouped' && DOM.startDate.value && DOM.endDate.value) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          DOM.generateBtn.click();
+        }, 100);
+      }
+    }
+
+    function showLoading(show) {
+      DOM.loadingIndicator.classList.toggle("hidden", !show);
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    setupEventDelegation();
+    initializeApp();
   </script>
 </body>
 </html>

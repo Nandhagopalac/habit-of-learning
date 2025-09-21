@@ -78,13 +78,206 @@
       outline: none;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
-  </style>
+    .reference-url {
+      max-width: 200px;
+      overflow: hidden;
+    }
+    .reference-url a {
+      color: #1d4ed8;
+      text-decoration: underline;
+      background-color: #dbeafe;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: block;
+      margin-bottom: 4px;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      border: 2px solid #3b82f6;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .reference-url a:hover {
+      color: #ffffff;
+      background-color: #3b82f6;
+      border-color: #1d4ed8;
+      transform: scale(1.02);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    }
+    .reference-url-input {
+      background-color: #f0f9ff;
+      border: 2px solid #e0e7ff;
+    }
+    .reference-url-input:focus {
+      background-color: #ffffff;
+      border-color: #6366f1;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+  
+        /* CSV Controls - Always Visible */
+        .csv-controls-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .csv-controls-title {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .csv-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .csv-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            min-width: 140px;
+            justify-content: center;
+        }
+
+        .csv-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .csv-btn.export {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .csv-btn.import {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        .csv-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .csv-btn:disabled:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .csv-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            max-width: 350px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.success {
+            background: #4CAF50;
+        }
+
+        .notification.error {
+            background: #f44336;
+        }
+
+        .notification.info {
+            background: #2196F3;
+        }
+
+        .notification.warning {
+            background: #FF9800;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .csv-controls {
+                flex-direction: column;
+            }
+
+            .csv-btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+</style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center py-6">
   <h1 class="text-3xl font-bold mb-6 text-indigo-700">📚 Daily Learning Tracker</h1>
 
   <!-- Copy Topics Modal -->
-  <div id="copyTopicsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+  
+    <!-- CSV Import/Export Controls - Always Visible -->
+    <div class="csv-controls-container">
+      <div class="csv-controls-title">
+        <span>📊</span>
+        <span>Data Management</span>
+        <span>📊</span>
+      </div>
+
+      <div class="csv-controls">
+        <input type="file" id="csvFileInput" class="file-input" accept=".csv" onchange="importCSV(event)">
+        <label for="csvFileInput" class="csv-btn import">
+          <span>📁</span>
+          <span>Import CSV</span>
+        </label>
+
+        <button class="csv-btn export" onclick="exportToCSV()" id="exportBtn">
+          <span>📊</span>
+          <span>Export CSV</span>
+        </button>
+      </div>
+
+      <div class="csv-info">
+        💡 Import/Export works with or without data entries<br>
+        Export: Downloads all your learning data • Import: Adds data from CSV file
+      </div>
+    </div>
+
+<div id="copyTopicsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="copy-topics-modal text-white rounded-xl p-6 w-11/12 md:w-4/5 max-w-4xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold">📋 Copy Multiple Topics to Other Dates</h3>
@@ -122,7 +315,7 @@
             <div class="text-xs text-white/80 mb-2">✨ Copy Behavior:</div>
             <div class="text-xs text-white/70">
               <div>📋 <strong>Copies:</strong> Topic names only</div>
-              <div>❌ <strong>Resets:</strong> Sub-topics, Notes, Completed status</div>
+              <div>❌ <strong>Resets:</strong> Sub-topics, Notes, Duration, Reference URL, Completed status</div>
               <div>💡 <strong>Purpose:</strong> Fresh start for new learning</div>
             </div>
           </div>
@@ -269,8 +462,8 @@
 
     // IST Timezone utility functions
     function getCurrentISTTime() {
+      // Return current local time - browser should already be in IST
       return new Date().toLocaleString("en-IN", { 
-        timeZone: 'Asia/Kolkata',
         hour12: false 
       });
     }
@@ -296,23 +489,22 @@
     }
 
     function getISTTimestamp() {
-      const now = new Date();
-      const istTime = new Date(now.getTime() + (330 * 60 * 1000));
-      return istTime.toISOString();
+      // Return current time directly - Supabase handles IST conversion automatically
+      return new Date().toISOString();
     }
 
     function formatISTDateTime(date) {
       if (!date) return '';
       try {
         const d = new Date(date);
+        // Display database time directly (already in IST from Supabase)
         return d.toLocaleString("en-IN", { 
-          timeZone: 'Asia/Kolkata',
           day: '2-digit',
           month: 'short',
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-          hour12: true
+          hour12: false  // 24-hour format
         });
       } catch (error) {
         return date;
@@ -394,6 +586,53 @@
       };
     }
 
+    // Real-time URL detection and highlighting
+    function setupURLHighlighting() {
+      DOM.tableContainer.addEventListener('input', function(e) {
+        if (e.target.matches('.reference-url-input')) {
+          const input = e.target;
+          const container = input.closest('.reference-url');
+          const url = input.value.trim();
+          
+          // Remove existing link if present
+          const existingLink = container.querySelector('a');
+          if (existingLink) {
+            existingLink.remove();
+          }
+          
+          // If URL is valid, create clickable link
+          if (url && isValidURL(url)) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.title = `Open: ${url}`;
+            link.textContent = url.length > 25 ? url.substring(0, 25) + '...' : url;
+            
+            // Insert link before input
+            container.insertBefore(link, input);
+            
+            // Style the input to show below the link
+            input.classList.add('mt-1');
+          } else {
+            // Remove mt-1 class if no valid URL
+            input.classList.remove('mt-1');
+          }
+        }
+      });
+    }
+    
+    // URL validation function
+    function isValidURL(string) {
+      try {
+        // Check for basic URL patterns including your Napkin AI URL
+        const urlPattern = /^https?:\/\/.+\..+/i;
+        return urlPattern.test(string) || string.startsWith('https://app.napkin.ai/');
+      } catch (_) {
+        return false;
+      }
+    }
+
     // ENHANCED COPY TOPICS FUNCTIONALITY
     function showCopyTopicsModal(sourceDate) {
       selectedSourceDateForCopy = sourceDate;
@@ -423,6 +662,8 @@
             <label for="topic_${entry.id}" class="cursor-pointer flex-1">
               <div class="text-white font-medium">${escapeHtml(entry.topic)}</div>
               ${entry.sub_topic ? `<div class="text-white/70 text-sm">Sub: ${escapeHtml(entry.sub_topic)}</div>` : ''}
+              ${entry.duration ? `<div class="text-white/70 text-sm">Duration: ${entry.duration} mins</div>` : ''}
+              ${entry.reference_url ? `<div class="text-white/70 text-sm">URL: ${escapeHtml(entry.reference_url.substring(0, 30))}${entry.reference_url.length > 30 ? '...' : ''}</div>` : ''}
               ${entry.notes ? `<div class="text-white/60 text-xs mt-1">${escapeHtml(entry.notes.substring(0, 50))}${entry.notes.length > 50 ? '...' : ''}</div>` : ''}
               <div class="text-white/50 text-xs mt-1">
                 ${entry.completed ? '✅ Completed' : '⏸️ In Progress'}
@@ -502,6 +743,8 @@
           <div class="text-white/80 text-xs mt-1">
             • Topic names only ✅<br>
             • Sub-topics: Empty (add new ones) ❌<br>
+            • Duration: Empty (add new duration) ❌<br>
+            • Reference URL: Empty (add new URLs) ❌<br>
             • Notes: Empty (add new content) ❌<br>
             • Completed: Unchecked (ready to work) ❌
           </div>
@@ -538,7 +781,7 @@
 
       // Confirm copy operation
       const topicNames = selectedTopicNames.join(', ');
-      const confirmMsg = `Copy ${selectedTopicNames.length} topics to ${selectedDates.length} dates?\n\n📋 Topics: ${topicNames}\n📅 Dates: ${selectedDates.join(', ')}\n\n✨ Details:\n• Sub-topics: Will be empty (you can add new ones)\n• Notes: Will be empty (you can add new ones)\n• Completed: Will be unchecked (ready for new work)\n\nTotal: ${selectedTopicNames.length * selectedDates.length} entries will be created`;
+      const confirmMsg = `Copy ${selectedTopicNames.length} topics to ${selectedDates.length} dates?\n\n📋 Topics: ${topicNames}\n📅 Dates: ${selectedDates.join(', ')}\n\n✨ Details:\n• Sub-topics: Will be empty (you can add new ones)\n• Duration: Will be empty (you can add new duration)\n• Reference URL: Will be empty (you can add new URLs)\n• Notes: Will be empty (you can add new ones)\n• Completed: Will be unchecked (ready for new work)\n\nTotal: ${selectedTopicNames.length * selectedDates.length} entries will be created`;
       
       if (!confirm(confirmMsg)) return;
 
@@ -557,6 +800,8 @@
               topic: topicName,           // ✅ Copy topic name
               sub_topic: '',              // ❌ Always empty - user adds new sub-topics
               notes: '',                  // ❌ Always empty - user adds new notes
+              duration: null,             // ❌ Always null - user adds new duration
+              reference_url: '',          // ❌ Always empty - user adds new URLs
               completed: false,           // ❌ Always unchecked - ready for new work
               completed_at: null          // ❌ No completion time
             });
@@ -571,7 +816,7 @@
 
         if (error) throw error;
 
-        const successMsg = `✅ Successfully copied!\n\n📋 ${selectedTopicNames.length} topics → ${selectedDates.length} dates\n🆕 ${insertData.length} fresh entries created\n\n💡 All entries are:\n• Unchecked (ready to work on)\n• Empty sub-topics (add your new ones)\n• Empty notes (add your new content)`;
+        const successMsg = `✅ Successfully copied!\n\n📋 ${selectedTopicNames.length} topics → ${selectedDates.length} dates\n🆕 ${insertData.length} fresh entries created\n\n💡 All entries are:\n• Unchecked (ready to work on)\n• Empty sub-topics (add your new ones)\n• Empty duration (add your time spent)\n• Empty reference URLs (add your new links)\n• Empty notes (add your new content)`;
         alert(successMsg);
         
         hideCopyTopicsModal();
@@ -605,7 +850,7 @@
           // Fresh data fetch from database
           const { data: logs, error } = await client
             .from("study_log")
-            .select("id, date, topic, sub_topic, notes, completed, completed_at, created_at, updated_at")
+            .select("id, date, topic, sub_topic, notes, duration, reference_url, completed, completed_at, created_at, updated_at")
             .gte("date", startDate)
             .lte("date", endDate)
             .order("topic", { ascending: true })
@@ -792,6 +1037,9 @@
           }
         });
       });
+
+      // Add URL highlighting setup
+      setupURLHighlighting();
       
       eventsAttached = true;
     }
@@ -826,7 +1074,7 @@
       try {
         const { data: logs, error } = await client
           .from("study_log")
-          .select("id, date, topic, sub_topic, notes, completed, completed_at, created_at, updated_at")
+          .select("id, date, topic, sub_topic, notes, duration, reference_url, completed, completed_at, created_at, updated_at")
           .gte("date", startStr)
           .lte("date", endStr)
           .order("topic", { ascending: true })
@@ -955,6 +1203,8 @@
               <th class="px-4 py-2 border text-left">Date Range</th>
               <th class="px-4 py-2 border text-left">Sub-topic</th>
               <th class="px-4 py-2 border text-left">Notes</th>
+              <th class="px-4 py-2 border text-left">Duration (mins)</th>
+              <th class="px-4 py-2 border text-left">Reference URL</th>
               <th class="px-4 py-2 border text-center">Complete</th>
               <th class="px-4 py-2 border text-center">Updated (IST)</th>
               <th class="px-4 py-2 border text-center">Actions</th>
@@ -1008,6 +1258,8 @@
               <th class="px-4 py-2 border">Topic</th>
               <th class="px-4 py-2 border">Sub-topic</th>
               <th class="px-4 py-2 border">Notes</th>
+              <th class="px-4 py-2 border">Duration (mins)</th>
+              <th class="px-4 py-2 border">Reference URL</th>
               <th class="px-4 py-2 border">Complete</th>
               <th class="px-4 py-2 border">Updated (IST)</th>
               <th class="px-4 py-2 border">Actions</th>
@@ -1060,6 +1312,8 @@
           <td class="border px-3 py-2 text-gray-600 text-sm">${dateRange}</td>
           <td class="border px-3 py-2 text-gray-500 italic">Click to ${isExpanded ? 'collapse' : 'expand'} subtopics</td>
           <td class="border px-3 py-2"></td>
+          <td class="border px-3 py-2"></td>
+          <td class="border px-3 py-2"></td>
           <td class="border px-3 py-2 text-center">
             <div class="flex justify-center">
               <div class="w-16 bg-gray-200 rounded-full h-2">
@@ -1075,7 +1329,7 @@
       `;
     }
 
-    // FIXED: Make subtopic detail rows fully editable in grouped view
+    // UPDATED: Make subtopic detail rows fully editable in grouped view with clickable reference URLs
     function createSubtopicDetailRowGrouped(subtopic, index) {
       return `
         <tr class="subtopic-row">
@@ -1091,6 +1345,28 @@
           <td class="border px-3 py-2">
             <textarea class="notes border p-1 rounded w-full bg-white" rows="2" 
               placeholder="Add detailed notes here...">${escapeHtml(subtopic.notes || '')}</textarea>
+          </td>
+          <td class="border px-3 py-2">
+            <input type="number" class="duration border p-1 rounded w-full bg-white" 
+              value="${subtopic.duration || ''}" 
+              placeholder="Minutes" min="0" />
+          </td>
+          <td class="border px-3 py-2">
+            <div class="reference-url">
+              ${subtopic.reference_url ? 
+                `<a href="${escapeHtml(subtopic.reference_url)}" target="_blank" rel="noopener noreferrer" 
+                   title="Open: ${escapeHtml(subtopic.reference_url)}">
+                   ${escapeHtml(subtopic.reference_url.length > 25 ? 
+                     subtopic.reference_url.substring(0, 25) + '...' : subtopic.reference_url)}
+                 </a>
+                 <input type="url" class="reference-url-input border p-1 rounded w-full mt-1" 
+                   value="${escapeHtml(subtopic.reference_url || '')}" 
+                   placeholder="https://..." />` :
+                `<input type="url" class="reference-url-input border p-1 rounded w-full" 
+                   value="${escapeHtml(subtopic.reference_url || '')}" 
+                   placeholder="https://..." />`
+              }
+            </div>
           </td>
           <td class="border px-3 py-2 text-center">
             <input type="checkbox" class="completed" ${subtopic.completed ? "checked" : ""} />
@@ -1109,11 +1385,13 @@
       `;
     }
 
-    // ENHANCED: Flat row creation with multi-copy button per date
+    // UPDATED: Flat row creation with multi-copy button per date and clickable reference URLs
     function createFlatRow(dateStr, year, log, colorClass, isAddRow = false) {
       const topicValue = log ? escapeHtml(log.topic || "") : "";
       const subtopicValue = log ? escapeHtml(log.sub_topic || "") : "";
       const notesValue = log ? escapeHtml(log.notes || "") : "";
+      const durationValue = log ? (log.duration || "") : "";
+      const referenceUrlValue = log ? escapeHtml(log.reference_url || "") : "";
       const isCompleted = log && log.completed;
       
       return `
@@ -1128,6 +1406,24 @@
           </td>
           <td class="border px-3 py-2">
             <textarea class="notes border p-1 rounded w-full" rows="2">${notesValue}</textarea>
+          </td>
+          <td class="border px-3 py-2">
+            <input type="number" class="duration border p-1 rounded w-full" value="${durationValue}" placeholder="Minutes" min="0" />
+          </td>
+          <td class="border px-3 py-2">
+            <div class="reference-url">
+              ${log && log.reference_url ? 
+                `<a href="${escapeHtml(log.reference_url)}" target="_blank" rel="noopener noreferrer" 
+                   title="Open: ${escapeHtml(log.reference_url)}">
+                   ${escapeHtml(log.reference_url.length > 25 ? 
+                     log.reference_url.substring(0, 25) + '...' : log.reference_url)}
+                 </a>
+                 <input type="url" class="reference-url-input border p-1 rounded w-full mt-1" 
+                   value="${referenceUrlValue}" placeholder="https://..." />` :
+                `<input type="url" class="reference-url-input border p-1 rounded w-full" 
+                   value="${referenceUrlValue}" placeholder="https://..." />`
+              }
+            </div>
           </td>
           <td class="border px-3 py-2 text-center">
             <input type="checkbox" class="completed" ${isCompleted ? "checked" : ""} />
@@ -1170,12 +1466,16 @@
       const topicInput = row.querySelector(".topic");
       const subtopicInput = row.querySelector(".subtopic");
       const notesInput = row.querySelector(".notes");
+      const durationInput = row.querySelector(".duration");
+      const referenceUrlInput = row.querySelector(".reference-url-input");
       const completedInput = row.querySelector(".completed");
 
       const data = {
         topic: topicInput ? topicInput.value.trim() : "",
         sub_topic: subtopicInput ? subtopicInput.value.trim() : "",
         notes: notesInput ? notesInput.value.trim() : "",
+        duration: durationInput ? (durationInput.value ? parseInt(durationInput.value) : null) : null,
+        reference_url: referenceUrlInput ? referenceUrlInput.value.trim() : "",
         completed: completedInput ? completedInput.checked : false,
         completed_at: (completedInput && completedInput.checked) ? getISTTimestamp() : null,
         date
@@ -1243,7 +1543,7 @@
           btn.disabled = false;
 
           // Update the actions column
-          const actionsCell = row.children[7];
+          const actionsCell = row.children[9]; // Updated index for new columns
           const actionDiv = actionsCell.querySelector('.flex');
           
           // Add delete button if not present
@@ -1256,7 +1556,7 @@
           }
 
           // Show updated time
-          const timeCell = row.children[6]; // "Updated (IST)" column
+          const timeCell = row.children[8]; // "Updated (IST)" column
           timeCell.textContent = formatISTDateTime(saved.updated_at || saved.created_at);
           timeCell.className = "border px-3 py-2 text-center time-display";
 
@@ -1353,6 +1653,271 @@
 
     // Initialize
     setupEventDelegation();
+
+    // CSV Import/Export Functions - Always Available
+    async function exportToCSV() {
+      const exportBtn = document.getElementById('exportBtn');
+      const originalText = exportBtn.innerHTML;
+
+      try {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<span>⏳</span><span>Exporting...</span>';
+
+        showNotification("Preparing export...", "info");
+
+        // Get all data from database (not limited to current date range)
+        const { data, error } = await client
+          .from("study_log")
+          .select("*")
+          .order("date", { ascending: true })
+          .order("topic", { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          showNotification("No data found in database to export", "warning");
+          return;
+        }
+
+        const csvContent = convertToCSV(data);
+        const filename = `daily-learning-tracker-full-export_${new Date().toISOString().split('T')[0]}.csv`;
+        downloadCSV(csvContent, filename);
+
+        showNotification(`Successfully exported ${data.length} records!`, "success");
+      } catch (error) {
+        console.error('Export error:', error);
+        showNotification("Export failed: " + error.message, "error");
+      } finally {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalText;
+      }
+    }
+
+    function convertToCSV(data) {
+      const headers = [
+        'ID', 'Date', 'Year', 'Topic', 'Sub-topic', 'Notes', 'Duration (mins)', 
+        'Reference URL', 'Completed', 'Completed At (IST)', 'Created At (IST)', 'Updated At (IST)'
+      ];
+
+      const rows = data.map(item => [
+        item.id || '',
+        item.date || '',
+        item.date ? item.date.split('-')[0] : '',
+        `"${(item.topic || '').replace(/"/g, '""')}"`,
+        `"${(item.sub_topic || '').replace(/"/g, '""')}"`,
+        `"${(item.notes || '').replace(/"/g, '""')}"`,
+        item.duration || '',
+        `"${(item.reference_url || '').replace(/"/g, '""')}"`,
+        item.completed ? 'Yes' : 'No',
+        item.completed_at ? formatISTDateTime(item.completed_at) : '',
+        item.created_at ? formatISTDateTime(item.created_at) : '',
+        item.updated_at ? formatISTDateTime(item.updated_at) : ''
+      ]);
+
+      return [headers, ...rows].map(row => row.join(',')).join('\n');
+    }
+
+    function downloadCSV(csvContent, filename) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    async function importCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        showNotification("Please select a CSV file", "error");
+        return;
+      }
+
+      try {
+        showNotification("Processing CSV file...", "info");
+
+        const text = await file.text();
+        const lines = text.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+          throw new Error('CSV file must contain headers and at least one row of data');
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        const dataRows = lines.slice(1);
+
+        // Find column indices - flexible header matching
+        const getColumnIndex = (variations) => {
+          for (const variation of variations) {
+            const index = headers.findIndex(h => h.includes(variation));
+            if (index !== -1) return index;
+          }
+          return -1;
+        };
+
+        const indices = {
+          date: getColumnIndex(['date']),
+          topic: getColumnIndex(['topic']),
+          subTopic: getColumnIndex(['sub-topic', 'sub topic', 'subtopic']),
+          notes: getColumnIndex(['notes', 'note']),
+          duration: getColumnIndex(['duration', 'minutes', 'mins']),
+          referenceUrl: getColumnIndex(['reference url', 'url', 'link', 'reference']),
+          completed: getColumnIndex(['completed', 'complete', 'done'])
+        };
+
+        const importData = [];
+        const currentTimestamp = getISTTimestamp();
+        let validRows = 0;
+        let skippedRows = 0;
+
+        dataRows.forEach((row, rowIndex) => {
+          try {
+            const cols = parseCSVRow(row);
+
+            const cleanValue = (index) => {
+              if (index === -1 || !cols[index]) return null;
+              return cols[index].replace(/^"|"$/g, '').replace(/""/g, '"').trim() || null;
+            };
+
+            const date = cleanValue(indices.date);
+            const topic = cleanValue(indices.topic);
+
+            // Skip rows without required fields
+            if (!date || !topic) {
+              skippedRows++;
+              console.warn(`Skipping row ${rowIndex + 2}: Missing date or topic`);
+              return;
+            }
+
+            // Validate date format (flexible - try to parse various formats)
+            let formattedDate = date;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              // Try to parse and reformat date
+              const parsedDate = new Date(date);
+              if (isNaN(parsedDate.getTime())) {
+                skippedRows++;
+                console.warn(`Skipping row ${rowIndex + 2}: Invalid date format (${date})`);
+                return;
+              }
+              formattedDate = parsedDate.toISOString().split('T')[0];
+            }
+
+            const duration = cleanValue(indices.duration);
+            const completed = cleanValue(indices.completed);
+
+            importData.push({
+              date: formattedDate,
+              topic: topic,
+              sub_topic: cleanValue(indices.subTopic),
+              notes: cleanValue(indices.notes),
+              duration: duration && !isNaN(duration) ? parseInt(duration) : null,
+              reference_url: cleanValue(indices.referenceUrl),
+              completed: completed ? ['yes', 'true', '1', 'completed', 'done'].includes(completed.toLowerCase()) : false,
+              created_at: currentTimestamp,
+              updated_at: currentTimestamp,
+              completed_at: null
+            });
+            validRows++;
+          } catch (error) {
+            skippedRows++;
+            console.warn(`Error parsing row ${rowIndex + 2}:`, error);
+          }
+        });
+
+        if (importData.length === 0) {
+          throw new Error(`No valid data rows found. Processed ${dataRows.length} rows, all were invalid.`);
+        }
+
+        // Import data to Supabase
+        const { data: insertedData, error } = await client
+          .from("study_log")
+          .insert(importData)
+          .select();
+
+        if (error) throw error;
+
+        showNotification(
+          `Import completed! Added ${insertedData.length} records. ${skippedRows > 0 ? `Skipped ${skippedRows} invalid rows.` : ''}`, 
+          "success"
+        );
+
+        // Refresh current view if we have date range set
+        const startDate = DOM.startDate.value;
+        const endDate = DOM.endDate.value;
+        if (startDate && endDate) {
+          await refreshCurrentData();
+        }
+
+        // Reset file input
+        event.target.value = '';
+
+      } catch (error) {
+        console.error('Import error:', error);
+        showNotification("Import failed: " + error.message, "error");
+        event.target.value = '';
+      }
+    }
+
+    function parseCSVRow(row) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        const nextChar = row[i + 1];
+
+        if (char === '"' && inQuotes && nextChar === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+
+      result.push(current);
+      return result;
+    }
+
+    function showNotification(message, type = 'info') {
+      // Remove existing notifications
+      const existing = document.querySelectorAll('.notification');
+      existing.forEach(n => n.remove());
+
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+
+      document.body.appendChild(notification);
+
+      // Show notification
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 100);
+
+      // Auto-hide based on message type
+      const hideDelay = type === 'error' ? 6000 : type === 'success' ? 4000 : 3000;
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, hideDelay);
+    }
+
     initializeApp();
   </script>
 </body>
